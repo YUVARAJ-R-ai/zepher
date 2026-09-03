@@ -1,14 +1,64 @@
 import fs from 'fs';
 import path from 'path';
 import { 
-  ZEPHER_DIR, MEMORY_DIR, DECISIONS_DIR, TASKS_DIR, 
+  ZEPHER_DIR, GLOBAL_ZEPHER_DIR, MEMORY_DIR, DECISIONS_DIR, TASKS_DIR, 
   SESSIONS_DIR, HANDOFFS_DIR, CONTEXT_DIR, RESEARCH_DIR, LOCAL_DIR,
-  CONFIG_FILE
+  SKILLS_DIR, RULES_DIR, HOOKS_DIR, CONFIG_FILE
 } from './constants.js';
 import { DEFAULT_CONFIG } from './config.js';
 import yaml from 'yaml';
 
-export async function initZepher(projectRoot: string) {
+export async function initGlobalZepher(): Promise<void> {
+  if (!fs.existsSync(GLOBAL_ZEPHER_DIR)) {
+    fs.mkdirSync(GLOBAL_ZEPHER_DIR, { recursive: true });
+  }
+
+  const dirs = [RULES_DIR, SKILLS_DIR, HOOKS_DIR];
+  for (const dir of dirs) {
+    const dirPath = path.join(GLOBAL_ZEPHER_DIR, dir);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  }
+
+  const configPath = path.join(GLOBAL_ZEPHER_DIR, CONFIG_FILE);
+  if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(configPath, yaml.stringify({
+      ...DEFAULT_CONFIG,
+      scope: 'global'
+    }));
+  }
+
+  // Add a sample global rule if empty
+  const sampleRulePath = path.join(GLOBAL_ZEPHER_DIR, RULES_DIR, 'engineering-standards.md');
+  if (!fs.existsSync(sampleRulePath)) {
+    fs.writeFileSync(sampleRulePath, `---
+id: engineering-standards
+title: Engineering Standards
+priority: 90
+tags: [standards, code-quality]
+---
+
+- Write clean, type-safe, maintainable code.
+- Avoid unnecessary dependencies and avoid AI hallucinations/slop.
+- Maintain consistent code formatting and clean commit hygiene.
+`);
+  }
+
+  console.log(`Initialized Global Zepher environment at ${GLOBAL_ZEPHER_DIR}`);
+}
+
+export async function initZepher(projectRoot: string, options: { global?: boolean } = {}) {
+  if (options.global) {
+    await initGlobalZepher();
+    return;
+  }
+
+  // Ensure global zepher exists
+  if (!fs.existsSync(GLOBAL_ZEPHER_DIR)) {
+    await initGlobalZepher();
+  }
+
   const zepherPath = path.join(projectRoot, ZEPHER_DIR);
   const isExisting = fs.existsSync(zepherPath);
 
@@ -26,7 +76,10 @@ export async function initZepher(projectRoot: string) {
     HANDOFFS_DIR,
     CONTEXT_DIR,
     RESEARCH_DIR,
-    LOCAL_DIR
+    LOCAL_DIR,
+    SKILLS_DIR,
+    RULES_DIR,
+    HOOKS_DIR
   ];
 
   for (const dir of dirs) {

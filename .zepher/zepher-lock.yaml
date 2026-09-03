@@ -1,0 +1,7 @@
+version: "1.0"
+skills:
+  frontend-design:
+    source: /home/yuvaraj/.gemini/config/skills/frontend-design
+    checksum: b81e2ff87ed8
+    installedAt: 2026-09-03T08:22:15.847Z
+    scope: global

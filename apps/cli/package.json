@@ -26,7 +26,8 @@
     "@zepher/workflows": "workspace:*",
     "chalk": "^5.6.2",
     "commander": "^12.1.0",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "@zepher/adapters": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
