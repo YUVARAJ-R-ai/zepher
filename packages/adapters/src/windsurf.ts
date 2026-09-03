@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import { formatHooksPrompt } from './common.js';
 
 export const windsurfAdapter: AgentAdapter = {
   id: 'windsurf',
@@ -19,6 +20,11 @@ export const windsurfAdapter: AgentAdapter = {
         content += `- **${rule.title}**: ${rule.content.replace(/\n/g, ' ')}\n`;
       }
       content += '\n';
+    }
+
+    const hooksSection = formatHooksPrompt(state.hooks);
+    if (hooksSection) {
+      content += hooksSection + '\n';
     }
 
     content += `## Context Strategy\n`;

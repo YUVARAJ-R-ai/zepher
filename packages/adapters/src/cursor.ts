@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import { formatHooksPrompt } from './common.js';
 
 export const cursorAdapter: AgentAdapter = {
   id: 'cursor',
@@ -20,6 +21,11 @@ export const cursorAdapter: AgentAdapter = {
         content += `${rule.content.trim()}\n`;
       }
       content += '\n';
+    }
+
+    const hooksSection = formatHooksPrompt(state.hooks);
+    if (hooksSection) {
+      content += hooksSection;
     }
 
     if (state.skills.length > 0) {

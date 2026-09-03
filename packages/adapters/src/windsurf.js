@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { formatHooksPrompt } from './common.js';
 export const windsurfAdapter = {
     id: 'windsurf',
     name: 'Windsurf',
@@ -16,6 +17,10 @@ export const windsurfAdapter = {
                 content += `- **${rule.title}**: ${rule.content.replace(/\n/g, ' ')}\n`;
             }
             content += '\n';
+        }
+        const hooksSection = formatHooksPrompt(state.hooks);
+        if (hooksSection) {
+            content += hooksSection + '\n';
         }
         content += `## Context Strategy\n`;
         content += `- Maintain context continuity using .zepher/ directory.\n`;

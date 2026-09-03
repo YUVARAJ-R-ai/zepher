@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import { formatHooksPrompt } from './common.js';
 
 export const claudeAdapter: AgentAdapter = {
   id: 'claude',
@@ -20,6 +21,11 @@ export const claudeAdapter: AgentAdapter = {
         content += `### ${rule.title} (Priority: ${rule.priority ?? 50})\n`;
         content += `${rule.content.trim()}\n\n`;
       }
+    }
+
+    const hooksSection = formatHooksPrompt(state.hooks);
+    if (hooksSection) {
+      content += hooksSection + '\n';
     }
 
     if (state.skills.length > 0) {

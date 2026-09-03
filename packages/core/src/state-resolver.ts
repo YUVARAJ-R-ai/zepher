@@ -134,7 +134,13 @@ export function loadHooksFromDir(dirPath: string, scope: 'global' | 'local'): Ho
     try {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const parsed = ext === '.json' ? JSON.parse(raw) : yaml.parse(raw);
-      const list = Array.isArray(parsed) ? parsed : parsed?.hooks;
+      const list = Array.isArray(parsed)
+        ? parsed
+        : (parsed?.hooks && Array.isArray(parsed.hooks))
+          ? parsed.hooks
+          : (parsed && parsed.run && parsed.stage)
+            ? [parsed]
+            : [];
       if (Array.isArray(list)) {
         for (const h of list) {
           if (h && h.run && h.stage) {

@@ -45,4 +45,26 @@ describe('Vendor Adapters Compilation', () => {
     expect(output.jsonMerges?.[0].path).toBe('.claude.json');
     expect(output.jsonMerges?.[0].patch.mcpServers.zepher).toBeDefined();
   });
+
+  it('injects mandatory verification hooks into cursor and claude rules', async () => {
+    const stateWithHooks: UnifiedZepherState = {
+      ...dummyState,
+      hooks: [
+        {
+          name: 'typecheck',
+          stage: 'pre-commit',
+          run: 'tsc --noEmit',
+          scope: 'local'
+        }
+      ]
+    };
+
+    const cursorOut = await cursorAdapter.compile(stateWithHooks, '/test-app');
+    expect(cursorOut.files[0].content).toContain('Mandatory Verification & Pre-Commit Hooks');
+    expect(cursorOut.files[0].content).toContain('**typecheck** (pre-commit): `tsc --noEmit`');
+
+    const claudeOut = await claudeAdapter.compile(stateWithHooks, '/test-app');
+    expect(claudeOut.files[0].content).toContain('Mandatory Verification & Pre-Commit Hooks');
+    expect(claudeOut.files[0].content).toContain('**typecheck** (pre-commit): `tsc --noEmit`');
+  });
 });

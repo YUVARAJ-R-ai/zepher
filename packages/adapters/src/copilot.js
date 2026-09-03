@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { formatHooksPrompt } from './common.js';
 export const copilotAdapter = {
     id: 'copilot',
     name: 'GitHub Copilot',
@@ -15,6 +16,10 @@ export const copilotAdapter = {
             for (const rule of state.rules) {
                 content += `### ${rule.title}\n${rule.content.trim()}\n\n`;
             }
+        }
+        const hooksSection = formatHooksPrompt(state.hooks);
+        if (hooksSection) {
+            content += hooksSection + '\n';
         }
         return {
             files: [

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { formatHooksPrompt } from './common.js';
 export const cursorAdapter = {
     id: 'cursor',
     name: 'Cursor',
@@ -17,6 +18,10 @@ export const cursorAdapter = {
                 content += `${rule.content.trim()}\n`;
             }
             content += '\n';
+        }
+        const hooksSection = formatHooksPrompt(state.hooks);
+        if (hooksSection) {
+            content += hooksSection;
         }
         if (state.skills.length > 0) {
             content += `## Project Skills & Workflows\n`;

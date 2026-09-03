@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import { formatHooksPrompt } from './common.js';
 
 export const copilotAdapter: AgentAdapter = {
   id: 'copilot',
@@ -18,6 +19,11 @@ export const copilotAdapter: AgentAdapter = {
       for (const rule of state.rules) {
         content += `### ${rule.title}\n${rule.content.trim()}\n\n`;
       }
+    }
+
+    const hooksSection = formatHooksPrompt(state.hooks);
+    if (hooksSection) {
+      content += hooksSection + '\n';
     }
 
     return {

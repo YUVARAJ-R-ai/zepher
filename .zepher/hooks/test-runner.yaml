@@ -1,0 +1,3 @@
+name: test-runner
+stage: pre-commit
+run: npx pnpm test

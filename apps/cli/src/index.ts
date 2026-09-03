@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { 
   initZepher, initGlobalZepher, getStatus, runDoctor, bootstrapAgent,
-  addRule, listAllRules, removeRule 
+  addRule, listAllRules, removeRule,
+  addHook, listAllHooks, removeHook, installGitHooks, uninstallGitHooks,
+  runHooks, resolveUnifiedState
 } from '@zepher/core';
 import { saveMemory, searchMemory } from '@zepher/memory';
 import { generateContext } from '@zepher/context';
@@ -220,6 +222,127 @@ skillCmd
     }
   });
 
+// Hooks Command Group
+const hookCmd = program.command('hook').description('Manage automated lifecycle hooks');
+
+hookCmd
+  .command('add')
+  .description('Add a new lifecycle hook')
+  .argument('<name>', 'Hook name, e.g. lint-check')
+  .requiredOption('-s, --stage <stage>', 'Hook stage (pre-sync, post-sync, pre-commit, post-commit)')
+  .requiredOption('-r, --run <command>', 'Shell command to execute')
+  .option('-g, --global', 'Add to global hooks (~/.zepher/hooks)')
+  .action((name, opts) => {
+    try {
+      const { filePath, hook } = addHook({
+        name,
+        stage: opts.stage,
+        run: opts.run,
+        global: opts.global,
+        projectRoot: process.cwd()
+      });
+      console.log(chalk.green(`✓ Added ${hook.scope} hook: "${hook.name}" [${hook.stage}]`));
+      console.log(`Saved to: ${filePath}`);
+    } catch (err: any) {
+      console.error(chalk.red(`Failed to add hook: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
+hookCmd
+  .command('list')
+  .description('List all global and local hooks')
+  .action(() => {
+    const { global, local } = listAllHooks(process.cwd());
+    console.log(chalk.bold.blue('\nGlobal Hooks (~/.zepher/hooks):'));
+    if (global.length === 0) {
+      console.log(chalk.gray('  (No global hooks registered)'));
+    } else {
+      global.forEach(h => console.log(`  • ${chalk.bold(h.name)} [${chalk.cyan(h.stage)}]: \`${chalk.yellow(h.run)}\``));
+    }
+
+    console.log(chalk.bold.blue('\nLocal Project Hooks (.zepher/hooks):'));
+    if (local.length === 0) {
+      console.log(chalk.gray('  (No local hooks registered)'));
+    } else {
+      local.forEach(h => console.log(`  • ${chalk.bold(h.name)} [${chalk.cyan(h.stage)}]: \`${chalk.yellow(h.run)}\``));
+    }
+    console.log();
+  });
+
+hookCmd
+  .command('remove')
+  .description('Remove a hook by name')
+  .argument('<name>', 'Hook name to remove')
+  .option('-g, --global', 'Remove from global hooks')
+  .action((name, opts) => {
+    const success = removeHook(name, { global: opts.global, projectRoot: process.cwd() });
+    if (success) {
+      console.log(chalk.green(`✓ Removed hook "${name}"`));
+    } else {
+      console.log(chalk.red(`✗ Hook "${name}" not found.`));
+    }
+  });
+
+hookCmd
+  .command('run')
+  .description('Execute hooks for a specific stage')
+  .argument('<stage>', 'Stage to run (pre-sync, post-sync, pre-commit, post-commit)')
+  .action(async (stage) => {
+    const state = await resolveUnifiedState(process.cwd());
+    const results = runHooks(stage, state.hooks, process.cwd());
+    if (results.length === 0) {
+      console.log(chalk.gray(`No hooks registered for stage "${stage}".`));
+      return;
+    }
+
+    let hasFailure = false;
+    for (const r of results) {
+      if (r.success) {
+        console.log(chalk.green(`✓ [${stage}] Hook "${r.hook.name}" passed`));
+        if (r.output && r.output.trim()) {
+          console.log(chalk.dim(r.output.trim()));
+        }
+      } else {
+        hasFailure = true;
+        console.error(chalk.red(`✗ [${stage}] Hook "${r.hook.name}" failed:`));
+        if (r.error) {
+          console.error(chalk.red(r.error.trim()));
+        }
+      }
+    }
+
+    if (hasFailure) {
+      process.exit(1);
+    }
+  });
+
+hookCmd
+  .command('install-git')
+  .description('Install Zepher pre-commit hook bridge into .git/hooks')
+  .action(() => {
+    const res = installGitHooks(process.cwd());
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+      console.log(chalk.gray('Your pre-commit hooks will now run automatically before every git commit.'));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+      process.exit(1);
+    }
+  });
+
+hookCmd
+  .command('uninstall-git')
+  .description('Uninstall Zepher hook bridge from .git/hooks')
+  .action(() => {
+    const res = uninstallGitHooks(process.cwd());
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+    } else {
+      console.log(chalk.yellow(res.message));
+    }
+  });
+
 // Integrations
 const integrate = program.command('integrate').description('Manage integrations');
 integrate.action(async () => {
@@ -241,7 +364,7 @@ integrate.command('doctor').action(async () => {
 });
 
 program.command('capabilities').action(() => {
-  console.log(`Zepher Capabilities\nCore\n✓ Persistent memory\n✓ Context assembly\n✓ Tasks\n✓ ADRs\n✓ Sessions\n✓ Handoffs\n✓ Skills\n✓ Workflows\n✓ Universal Rules Engine\n✓ Two-Tier Global/Local Inheritance\n✓ Vendor Adapters (Cursor, Claude, Windsurf, Copilot, Gemini)\n✓ Sync Compiler & Reverse Import\n\nIntegrations\n✓ codebase-memory-mcp\n✓ Graphify\n✓ ECC\n\nAgent interfaces\n✓ MCP\n✓ AGENTS.md`);
+  console.log(`Zepher Capabilities\nCore\n✓ Persistent memory\n✓ Context assembly\n✓ Tasks\n✓ ADRs\n✓ Sessions\n✓ Handoffs\n✓ Skills\n✓ Workflows\n✓ Universal Rules Engine\n✓ Universal Hooks Engine (pre/post-sync, pre/post-commit, git bridge)\n✓ Two-Tier Global/Local Inheritance\n✓ Vendor Adapters (Cursor, Claude, Windsurf, Copilot, Gemini)\n✓ Sync Compiler & Reverse Import\n\nIntegrations\n✓ codebase-memory-mcp\n✓ Graphify\n✓ ECC\n\nAgent interfaces\n✓ MCP\n✓ AGENTS.md`);
 });
 
 const agent = program.command('agent').description('Manage agents');
