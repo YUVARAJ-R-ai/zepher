@@ -10,15 +10,26 @@ export function saveMemory(projectRoot: string, type: string, content: string): 
   }
 
   const memoryPath = path.join(projectRoot, ZEPHER_DIR, MEMORY_DIR, `${type}.md`);
-  
   if (!fs.existsSync(memoryPath)) {
     console.error(`Error: Memory type ${type} does not exist.`);
     return false;
   }
   
+  const existingContent = fs.readFileSync(memoryPath, 'utf-8');
+  
+  // Basic conflict detection
+  const lines = content.split('\n');
+  let conflict = false;
+  for (const line of lines) {
+    if (line.includes('Database =') && existingContent.includes('Database =') && !existingContent.includes(line)) {
+      conflict = true;
+      console.log(`Potential memory conflict detected:\nExisting contains Database definition.\nAction required: Confirm which is authoritative.`);
+      return false; // Reject silent overwrite
+    }
+  }
+
   const timestamp = new Date().toISOString();
   const memoryEntry = `\n## [${timestamp}]\n${content}\n`;
-  
   fs.appendFileSync(memoryPath, memoryEntry);
   return true;
 }

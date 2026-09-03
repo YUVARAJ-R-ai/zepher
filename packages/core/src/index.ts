@@ -3,3 +3,4 @@ export * from './config.js';
 export * from './init.js';
 export * from './status.js';
 export * from './doctor.js';
+export * from './bootstrap.js';

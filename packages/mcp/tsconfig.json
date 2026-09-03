@@ -11,6 +11,7 @@
     { "path": "../tasks" },
     { "path": "../decisions" },
     { "path": "../sessions" },
-    { "path": "../context" }
+    { "path": "../context" },
+    { "path": "../integrations" }
   ]
 }
