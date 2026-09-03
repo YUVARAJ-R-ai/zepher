@@ -1,0 +1,11 @@
+export const ZEPHER_DIR = '.zepher';
+export const CONFIG_FILE = 'config.yaml';
+export const MEMORY_DIR = 'memory';
+export const DECISIONS_DIR = 'decisions';
+export const TASKS_DIR = 'tasks';
+export const SESSIONS_DIR = 'sessions';
+export const HANDOFFS_DIR = 'handoffs';
+export const CONTEXT_DIR = 'context';
+export const RESEARCH_DIR = 'research';
+export const LOCAL_DIR = 'local';
+export const SKILLS_DIR = 'skills';

@@ -1,0 +1,24 @@
+{
+  "name": "zepher",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Persistent context and memory infrastructure for AI coding agents",
+  "bin": {
+    "zepher": "./apps/cli/bin/zepher.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "start": "node ./apps/cli/bin/zepher.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0",
+    "@types/node": "^20.12.7"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "yaml": "^2.4.1",
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  }
+}

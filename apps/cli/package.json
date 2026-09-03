@@ -1,0 +1,34 @@
+{
+  "name": "zepher",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "zepher": "./bin/zepher.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "start": "node ./bin/zepher.js"
+  },
+  "dependencies": {
+    "@zepher/context": "workspace:*",
+    "@zepher/core": "workspace:*",
+    "@zepher/decisions": "workspace:*",
+    "@zepher/integrations": "workspace:*",
+    "@zepher/mcp": "workspace:*",
+    "@zepher/memory": "workspace:*",
+    "@zepher/sessions": "workspace:*",
+    "@zepher/skills": "workspace:*",
+    "@zepher/tasks": "workspace:*",
+    "@zepher/workflows": "workspace:*",
+    "chalk": "^5.6.2",
+    "commander": "^12.1.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}

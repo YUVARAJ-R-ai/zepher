@@ -1,0 +1,3 @@
+# Ignore local machine specific files
+local/
+cache/
