@@ -13,25 +13,41 @@ export const codebaseMemoryAdapter: ZepherIntegration = {
     'impact_analysis', 'architecture_exploration'
   ],
   async detect(projectRoot) {
-    // Basic detection stub
-    return { installed: false, reason: 'Not implemented' };
+    const hasConfig = fs.existsSync(path.join(projectRoot, '.mcp.json'));
+    return { installed: hasConfig, reason: hasConfig ? 'Configured in .mcp.json' : 'Not configured' };
   },
   async validate(projectRoot) {
     return { valid: true };
   },
   async enable(projectRoot) {
-    console.log('Enabled codebase-memory (stub)');
+    const mcpConfigPath = path.join(projectRoot, '.mcp.json');
+    const config = fs.existsSync(mcpConfigPath) ? JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8')) : { mcpServers: {} };
+    if (!config.mcpServers) config.mcpServers = {};
+    config.mcpServers['codebase-memory'] = {
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-codebase-memory', projectRoot]
+    };
+    fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2));
   },
   async disable(projectRoot) {
-    console.log('Disabled codebase-memory (stub)');
+    const mcpConfigPath = path.join(projectRoot, '.mcp.json');
+    if (fs.existsSync(mcpConfigPath)) {
+      const config = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8'));
+      if (config.mcpServers && config.mcpServers['codebase-memory']) {
+        delete config.mcpServers['codebase-memory'];
+        fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2));
+      }
+    }
   },
   async status(projectRoot) {
-    return { enabled: false, running: false, details: 'Not installed' };
+    const hasConfig = fs.existsSync(path.join(projectRoot, '.mcp.json'));
+    return { enabled: hasConfig, running: false, details: hasConfig ? 'Enabled' : 'Disabled' };
   },
   async doctor(projectRoot) {
+    const hasConfig = fs.existsSync(path.join(projectRoot, '.mcp.json'));
     return {
-      healthy: false,
-      checks: [{ name: 'MCP Server detected', passed: false, message: 'Not found' }]
+      healthy: hasConfig,
+      checks: [{ name: 'MCP Server configured', passed: hasConfig, message: hasConfig ? 'Configured in .mcp.json' : 'Not configured' }]
     };
   }
 };

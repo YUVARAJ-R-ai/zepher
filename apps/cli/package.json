@@ -13,6 +13,7 @@
     "start": "node ./bin/zepher.js"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.7.0",
     "@zepher/context": "workspace:*",
     "@zepher/core": "workspace:*",
     "@zepher/decisions": "workspace:*",

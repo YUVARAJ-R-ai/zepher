@@ -8,6 +8,7 @@ import { createHandoff } from '@zepher/sessions';
 import { runServer } from '@zepher/mcp';
 import { getAllIntegrations, getIntegration } from '@zepher/integrations';
 import path from 'path';
+import { runIntegrationTui } from './tui.js';
 
 const program = new Command();
 
@@ -27,13 +28,7 @@ program.command('mcp').action(async () => { await runServer(); });
 
 const integrate = program.command('integrate').description('Manage integrations');
 integrate.action(async () => {
-  console.log('Zepher Integration Manager\nDetected:\n');
-  const integrations = getAllIntegrations();
-  for (const i of integrations) {
-    const status = await i.detect(process.cwd());
-    const mark = status.installed ? '✓' : '~';
-    console.log(`${mark} ${i.name}\n  ${i.description}\n`);
-  }
+  await runIntegrationTui(process.cwd());
 });
 integrate.command('enable').argument('<id>').action(async (id) => { const i = getIntegration(id); if (i) await i.enable(process.cwd()); });
 integrate.command('disable').argument('<id>').action(async (id) => { const i = getIntegration(id); if (i) await i.disable(process.cwd()); });

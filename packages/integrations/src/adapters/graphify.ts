@@ -1,4 +1,6 @@
 import { ZepherIntegration } from '../types.js';
+import fs from 'fs';
+import path from 'path';
 
 export const graphifyAdapter: ZepherIntegration = {
   id: 'graphify',
@@ -9,10 +11,23 @@ export const graphifyAdapter: ZepherIntegration = {
     'architecture_visualization', 'relationship_exploration',
     'project_graph', 'dependency_visualization'
   ],
-  async detect(projectRoot) { return { installed: false, reason: 'Not implemented' }; },
+  async detect(projectRoot) { 
+    const hasConfig = fs.existsSync(path.join(projectRoot, 'graphify.json'));
+    return { installed: hasConfig, reason: hasConfig ? 'Configured' : 'Not configured' }; 
+  },
   async validate(projectRoot) { return { valid: true }; },
-  async enable(projectRoot) { console.log('Enabled graphify (stub)'); },
-  async disable(projectRoot) { console.log('Disabled graphify (stub)'); },
-  async status(projectRoot) { return { enabled: false, running: false }; },
-  async doctor(projectRoot) { return { healthy: false, checks: [] }; }
+  async enable(projectRoot) { 
+    fs.writeFileSync(path.join(projectRoot, 'graphify.json'), JSON.stringify({ targetDir: '.', outputDir: 'graphify-out' }, null, 2));
+  },
+  async disable(projectRoot) { 
+    if (fs.existsSync(path.join(projectRoot, 'graphify.json'))) fs.unlinkSync(path.join(projectRoot, 'graphify.json'));
+  },
+  async status(projectRoot) { 
+    const hasConfig = fs.existsSync(path.join(projectRoot, 'graphify.json'));
+    return { enabled: hasConfig, running: false }; 
+  },
+  async doctor(projectRoot) { 
+    const hasConfig = fs.existsSync(path.join(projectRoot, 'graphify.json'));
+    return { healthy: hasConfig, checks: [{ name: 'Configured', passed: hasConfig }] }; 
+  }
 };
