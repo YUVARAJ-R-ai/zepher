@@ -7,6 +7,8 @@ export interface Rule {
   scope: 'global' | 'local';
   sourceFile?: string;    // Relative path where it came from
   override?: boolean;     // If true, local completely replaces matching global rule
+  globs?: string[];       // File path globs (e.g. ["src/**/*.ts"]) for targeted rules
+  alwaysApply?: boolean;  // Whether to always attach rule regardless of active file
 }
 
 export interface SkillMeta {

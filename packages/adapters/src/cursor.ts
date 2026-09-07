@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import yaml from 'yaml';
+import { AgentAdapter, UnifiedZepherState, AdapterOutput, FileOutput } from '@zepher/core';
 import { formatHooksPrompt } from './common.js';
 
 export const cursorAdapter: AgentAdapter = {
@@ -12,11 +13,41 @@ export const cursorAdapter: AgentAdapter = {
       fs.existsSync(path.join(projectRoot, '.cursor'));
   },
   compile(state: UnifiedZepherState, projectRoot: string): AdapterOutput {
+    const files: FileOutput[] = [];
+
+    // Separate glob-scoped rules from general/always-apply rules
+    const globRules = state.rules.filter(r => r.globs && r.globs.length > 0 && !r.alwaysApply);
+    const globalRules = state.rules.filter(r => !r.globs || r.globs.length === 0 || r.alwaysApply);
+
+    // 1. Emit individual .cursor/rules/<id>.mdc files for glob-scoped rules
+    for (const rule of globRules) {
+      const frontmatter = {
+        description: rule.title,
+        globs: rule.globs,
+        alwaysApply: Boolean(rule.alwaysApply)
+      };
+
+      const mdcContent = `---
+${yaml.stringify(frontmatter).trim()}
+---
+
+# ${rule.title} (Priority: ${rule.priority ?? 50})
+
+${rule.content.trim()}
+`;
+
+      files.push({
+        path: `.cursor/rules/${rule.id}.mdc`,
+        content: mdcContent
+      });
+    }
+
+    // 2. Emit main .cursorrules for general standards, hooks, and context
     let content = `# Cursor Project Rules for ${state.project.name}\n\n`;
 
-    if (state.rules.length > 0) {
+    if (globalRules.length > 0) {
       content += `## Engineering Standards & Rules\n`;
-      for (const rule of state.rules) {
+      for (const rule of globalRules) {
         content += `\n### ${rule.title} (Priority: ${rule.priority ?? 50})\n`;
         content += `${rule.content.trim()}\n`;
       }
@@ -42,14 +73,12 @@ export const cursorAdapter: AgentAdapter = {
     content += `- Read .zepher/tasks/active/ for active task details.\n`;
     content += `- Read .zepher/decisions/ for architectural decisions (ADRs).\n`;
 
-    return {
-      files: [
-        {
-          path: '.cursorrules',
-          content: content.trim() + '\n'
-        }
-      ]
-    };
+    files.push({
+      path: '.cursorrules',
+      content: content.trim() + '\n'
+    });
+
+    return { files };
   },
   import(content: string, filePath: string): Partial<UnifiedZepherState> {
     const rules = [];

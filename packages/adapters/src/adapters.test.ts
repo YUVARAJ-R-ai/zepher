@@ -67,4 +67,34 @@ describe('Vendor Adapters Compilation', () => {
     expect(claudeOut.files[0].content).toContain('Mandatory Verification & Pre-Commit Hooks');
     expect(claudeOut.files[0].content).toContain('**typecheck** (pre-commit): `tsc --noEmit`');
   });
+
+  it('compiles glob-scoped rules into individual .cursor/rules/<id>.mdc files', async () => {
+    const stateWithGlobs: UnifiedZepherState = {
+      ...dummyState,
+      rules: [
+        {
+          id: 'react-components',
+          title: 'React Components Rule',
+          content: 'Use functional components with memo',
+          priority: 85,
+          scope: 'local',
+          globs: ['src/components/**/*.tsx']
+        },
+        ...dummyState.rules
+      ]
+    };
+
+    const output = await cursorAdapter.compile(stateWithGlobs, '/test-app');
+    expect(output.files.length).toBe(2);
+
+    const mdcFile = output.files.find(f => f.path === '.cursor/rules/react-components.mdc');
+    expect(mdcFile).toBeDefined();
+    expect(mdcFile?.content).toContain('globs:');
+    expect(mdcFile?.content).toContain('src/components/**/*.tsx');
+    expect(mdcFile?.content).toContain('Use functional components with memo');
+
+    const mainRules = output.files.find(f => f.path === '.cursorrules');
+    expect(mainRules?.content).toContain('No Any Type');
+    expect(mainRules?.content).not.toContain('React Components Rule');
+  });
 });
