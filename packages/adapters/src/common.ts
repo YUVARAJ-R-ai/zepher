@@ -12,3 +12,18 @@ export function formatHooksPrompt(hooks: Hook[]): string {
   }
   return section + '\n';
 }
+import fs from 'fs';
+import path from 'path';
+import { generateSafeEnvSchema } from '@zepher/core';
+
+export function formatVaultPrompt(projectRoot: string): string {
+  const envPath = path.join(projectRoot, '.env');
+  if (!fs.existsSync(envPath)) return '';
+
+  try {
+    const raw = fs.readFileSync(envPath, 'utf-8');
+    return generateSafeEnvSchema(raw);
+  } catch {
+    return '';
+  }
+}

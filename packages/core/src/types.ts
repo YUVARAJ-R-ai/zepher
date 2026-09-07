@@ -40,6 +40,54 @@ export interface ZepherLockfile {
   skills: Record<string, LockfileEntry>;
 }
 
+export type VaultFileType = 'secret' | 'seed' | 'binary' | 'doc';
+
+export interface VaultTrackedItem {
+  path: string;           // Relative file path or glob pattern (e.g. ".env", "db/seeds/*.sql")
+  type: VaultFileType;
+  autoSeal?: boolean;
+}
+
+export interface VaultMember {
+  username: string;       // GitHub username or identifier
+  publicKey?: string;     // SSH/Age public key
+  addedAt: string;
+}
+
+export interface VaultConfig {
+  version: '1.0';
+  members: VaultMember[];
+  items: VaultTrackedItem[];
+}
+
+export interface VaultLockEntry {
+  path: string;
+  sha256: string;
+  sealedAt: string;
+  sealedBy?: string;
+  envelopeFile: string;   // e.g. ".zepher/vault/dotenv.enc"
+}
+
+export interface VaultLockfile {
+  version: '1.0';
+  files: Record<string, VaultLockEntry>;
+}
+
+export interface AssetPointer {
+  path: string;
+  sha256: string;
+  size: number;
+  storage: 'local' | 'r2' | 's3' | 'ssh';
+  location: string;       // Key or relative storage path
+  tag?: string;
+  updatedAt: string;
+}
+
+export interface AssetsLockfile {
+  version: '1.0';
+  assets: Record<string, AssetPointer>;
+}
+
 export interface ProjectMetadata {
   name: string;
   root: string;

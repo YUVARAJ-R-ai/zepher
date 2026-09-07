@@ -4,7 +4,9 @@ import {
   initZepher, initGlobalZepher, getStatus, runDoctor, bootstrapAgent,
   addRule, listAllRules, removeRule,
   addHook, listAllHooks, removeHook, installGitHooks, uninstallGitHooks,
-  runHooks, resolveUnifiedState
+  runHooks, resolveUnifiedState,
+  trackVaultFile, sealVault, unsealVault, loadVaultConfig, loadVaultLockfile, checkVaultDirtyStatus,
+  trackAsset, stashLocalAsset, restoreLocalAsset
 } from '@zepher/core';
 import { saveMemory, searchMemory } from '@zepher/memory';
 import { generateContext } from '@zepher/context';
@@ -406,12 +408,122 @@ integrate.command('doctor').action(async () => {
 });
 
 program.command('capabilities').action(() => {
-  console.log(`Zepher Capabilities\nCore\n✓ Persistent memory\n✓ Context assembly\n✓ Tasks\n✓ ADRs\n✓ Sessions\n✓ Handoffs\n✓ Skills\n✓ Workflows\n✓ Universal Rules Engine\n✓ Universal Hooks Engine (pre/post-sync, pre/post-commit, git bridge)\n✓ Two-Tier Global/Local Inheritance\n✓ Vendor Adapters (Cursor, Claude, Windsurf, Copilot, Gemini)\n✓ Sync Compiler & Reverse Import\n\nIntegrations\n✓ codebase-memory-mcp\n✓ Graphify\n✓ ECC\n\nAgent interfaces\n✓ MCP\n✓ AGENTS.md`);
+  console.log(`Zepher Capabilities\nCore\n✓ Persistent memory\n✓ Context assembly\n✓ Tasks\n✓ ADRs\n✓ Sessions\n✓ Handoffs\n✓ Skills\n✓ Workflows\n✓ Universal Rules Engine\n✓ Universal Hooks Engine (pre/post-sync, pre/post-commit, git bridge)\n✓ Two-Tier Global/Local Inheritance\n✓ Vendor Adapters (Cursor, Claude, Windsurf, Copilot, Gemini)\n✓ Sync Compiler & Reverse Import\n✓ Team Vault (Zero-Knowledge Secrets, Seeds & Documents)\n✓ Asset Hub (Binary & Heavy Artifact Pointer Stash)\n\nIntegrations\n✓ codebase-memory-mcp\n✓ Graphify\n✓ ECC\n\nAgent interfaces\n✓ MCP\n✓ AGENTS.md`);
 });
 
 const agent = program.command('agent').description('Manage agents');
 agent.command('bootstrap').action(() => {
   bootstrapAgent(process.cwd());
 });
+
+// Vault Command Group
+const vaultCmd = program.command('vault').description('Manage encrypted team secrets, database seeds, and private configs');
+
+vaultCmd
+  .command('track <path>')
+  .description('Track a private file or secret in Zepher Vault (automatically adds to .gitignore)')
+  .option('-t, --type <type>', 'Type of asset: secret, seed, binary, doc', 'secret')
+  .action((filePath, opts) => {
+    const res = trackVaultFile(process.cwd(), filePath, opts.type);
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+      console.log(`Run ${chalk.cyan('zepher vault seal')} to encrypt.`);
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+    }
+  });
+
+vaultCmd
+  .command('seal')
+  .description('Encrypt all tracked vault files into .zepher/vault/*.enc')
+  .option('-p, --passphrase <key>', 'Passphrase or key to encrypt envelope', 'zepher-team-key')
+  .action((opts) => {
+    const res = sealVault(process.cwd(), opts.passphrase);
+    if (res.sealedCount > 0) {
+      console.log(chalk.bold.green(`✓ Successfully sealed and encrypted ${res.sealedCount} vault file(s).`));
+    }
+    if (res.errors.length > 0) {
+      res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+    }
+  });
+
+vaultCmd
+  .command('unseal')
+  .description('Decrypt vault files into working directory')
+  .option('-p, --passphrase <key>', 'Passphrase or key to decrypt envelope', 'zepher-team-key')
+  .action((opts) => {
+    const res = unsealVault(process.cwd(), opts.passphrase);
+    if (res.unsealedCount > 0) {
+      console.log(chalk.bold.green(`✓ Successfully unsealed ${res.unsealedCount} vault file(s).`));
+    }
+    if (res.errors.length > 0) {
+      res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+    }
+  });
+
+vaultCmd
+  .command('status')
+  .description('Check vault tracking and dirty status')
+  .action(() => {
+    const config = loadVaultConfig(process.cwd());
+    const lockfile = loadVaultLockfile(process.cwd());
+    const dirty = checkVaultDirtyStatus(process.cwd());
+
+    console.log(chalk.bold.blue('\n⚡ Zepher Vault Status:'));
+    if (config.items.length === 0) {
+      console.log(chalk.gray('  No files currently tracked in vault. Track one with "zepher vault track <path>"'));
+      return;
+    }
+    for (const item of config.items) {
+      const isDirty = dirty.dirtyFiles.includes(item.path);
+      const isSealed = Boolean(lockfile.files[item.path]);
+      const statusStr = isDirty
+        ? chalk.yellow('[MODIFIED - UNSEALED]')
+        : isSealed
+        ? chalk.green('[SEALED & IN SYNC]')
+        : chalk.red('[NOT SEALED]');
+      console.log(`  • ${item.path} (${item.type}): ${statusStr}`);
+    }
+  });
+
+// Asset Command Group
+const assetCmd = program.command('asset').description('Manage heavy binaries, executables, and datasets');
+
+assetCmd
+  .command('track <path>')
+  .description('Track a binary or heavy artifact in Zepher Asset Hub')
+  .option('-t, --tag <tag>', 'Optional version or release tag')
+  .action((filePath, opts) => {
+    const res = trackAsset(process.cwd(), filePath, { tag: opts.tag });
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+    }
+  });
+
+assetCmd
+  .command('stash <path>')
+  .description('Stash a tracked binary file to local/remote blob store')
+  .action((filePath) => {
+    const res = stashLocalAsset(process.cwd(), filePath);
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+    }
+  });
+
+assetCmd
+  .command('pull <path>')
+  .description('Restore a tracked binary file from blob store with SHA-256 verification')
+  .action((filePath) => {
+    const res = restoreLocalAsset(process.cwd(), filePath);
+    if (res.success) {
+      console.log(chalk.green(`✓ ${res.message}`));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+    }
+  });
 
 program.parse(process.argv);
