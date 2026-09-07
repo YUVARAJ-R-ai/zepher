@@ -138,3 +138,95 @@ export async function runSync(projectRoot: string, options: SyncOptions = {}): P
 
   return result;
 }
+import fs from 'fs';
+import { calculateChecksum, stripWatermark } from '@zepher/core';
+
+export interface DriftCheckResult {
+  inSync: boolean;
+  checkedFiles: string[];
+  drifts: Array<{ file: string; reason: string }>;
+}
+
+export async function verifySyncDrift(projectRoot: string): Promise<DriftCheckResult> {
+  const result: DriftCheckResult = {
+    inSync: true,
+    checkedFiles: [],
+    drifts: []
+  };
+
+  const state = await resolveUnifiedState(projectRoot);
+  const detected = await detectActiveAdapters(projectRoot);
+  const adapters = detected.length > 0 ? detected : [getAdapter('cursor')!, getAdapter('claude')!].filter(Boolean);
+
+  for (const adapter of adapters) {
+    const output = await adapter.compile(state, projectRoot);
+    if (output.files) {
+      for (const f of output.files) {
+        const fullPath = path.join(projectRoot, f.path);
+        result.checkedFiles.push(f.path);
+
+        if (!fs.existsSync(fullPath)) {
+          result.inSync = false;
+          result.drifts.push({ file: f.path, reason: 'File does not exist on disk' });
+          continue;
+        }
+
+        const diskContent = fs.readFileSync(fullPath, 'utf-8');
+        const strippedDisk = stripWatermark(diskContent);
+        const diskChecksum = calculateChecksum(strippedDisk);
+        const expectedChecksum = calculateChecksum(f.content);
+        if (diskChecksum !== expectedChecksum) {
+          result.inSync = false;
+          result.drifts.push({ file: f.path, reason: `Content drift detected (disk: ${diskChecksum}, expected: ${expectedChecksum})` });
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+export function watchZepher(
+  projectRoot: string,
+  onSync?: (res: SyncResult) => void
+): { close: () => void } {
+  const localDirs = [
+    path.join(projectRoot, '.zepher', 'rules'),
+    path.join(projectRoot, '.zepher', 'skills'),
+    path.join(projectRoot, '.zepher', 'hooks')
+  ];
+
+  let timeout: NodeJS.Timeout | null = null;
+  const watchers: fs.FSWatcher[] = [];
+
+  const trigger = () => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      console.log(chalk.dim(`\n[zepher watch] Detected change, recompiling...`));
+      try {
+        const res = await runSync(projectRoot);
+        if (onSync) onSync(res);
+      } catch (err: any) {
+        console.error(chalk.red(`[zepher watch] Sync error: ${err.message}`));
+      }
+    }, 150);
+  };
+
+  for (const d of localDirs) {
+    if (fs.existsSync(d)) {
+      try {
+        const w = fs.watch(d, { recursive: true }, trigger);
+        watchers.push(w);
+      } catch {
+        // Fallback
+      }
+    }
+  }
+
+  return {
+    close: () => {
+      if (timeout) clearTimeout(timeout);
+      watchers.forEach(w => w.close());
+    }
+  };
+}

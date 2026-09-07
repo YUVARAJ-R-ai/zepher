@@ -41,6 +41,7 @@ export function loadRulesFromDir(dirPath: string, scope: 'global' | 'local'): Ru
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             if (item && item.content) {
+              const globs = Array.isArray(item.globs) ? item.globs : (typeof item.globs === 'string' ? item.globs.split(',').map((g: string) => g.trim()) : undefined);
               rules.push({
                 id: item.id || `${baseId}-${rules.length}`,
                 title: item.title || item.id || baseId,
@@ -49,11 +50,14 @@ export function loadRulesFromDir(dirPath: string, scope: 'global' | 'local'): Ru
                 priority: typeof item.priority === 'number' ? item.priority : 50,
                 scope,
                 sourceFile: file,
-                override: Boolean(item.override)
+                override: Boolean(item.override),
+                globs,
+                alwaysApply: typeof item.alwaysApply === 'boolean' ? item.alwaysApply : undefined
               });
             }
           }
         } else if (parsed && parsed.content) {
+          const globs = Array.isArray(parsed.globs) ? parsed.globs : (typeof parsed.globs === 'string' ? parsed.globs.split(',').map((g: string) => g.trim()) : undefined);
           rules.push({
             id: parsed.id || baseId,
             title: parsed.title || baseId,
@@ -62,7 +66,9 @@ export function loadRulesFromDir(dirPath: string, scope: 'global' | 'local'): Ru
             priority: typeof parsed.priority === 'number' ? parsed.priority : 50,
             scope,
             sourceFile: file,
-            override: Boolean(parsed.override)
+            override: Boolean(parsed.override),
+            globs,
+            alwaysApply: typeof parsed.alwaysApply === 'boolean' ? parsed.alwaysApply : undefined
           });
         }
       } catch {
@@ -72,6 +78,7 @@ export function loadRulesFromDir(dirPath: string, scope: 'global' | 'local'): Ru
       const { data, content } = parseFrontmatter(raw);
       const titleMatch = content.match(/^#\s+(.+)$/m);
       const title = data.title || (titleMatch ? titleMatch[1] : baseId);
+      const globs = Array.isArray(data.globs) ? data.globs : (typeof data.globs === 'string' ? data.globs.split(',').map((g: string) => g.trim()) : undefined);
 
       rules.push({
         id: data.id || baseId,
@@ -81,7 +88,9 @@ export function loadRulesFromDir(dirPath: string, scope: 'global' | 'local'): Ru
         priority: typeof data.priority === 'number' ? data.priority : 50,
         scope,
         sourceFile: file,
-        override: Boolean(data.override)
+        override: Boolean(data.override),
+        globs,
+        alwaysApply: typeof data.alwaysApply === 'boolean' ? data.alwaysApply : undefined
       });
     }
   }

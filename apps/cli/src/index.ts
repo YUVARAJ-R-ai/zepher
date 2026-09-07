@@ -13,7 +13,7 @@ import { createDecision } from '@zepher/decisions';
 import { createHandoff } from '@zepher/sessions';
 import { runServer } from '@zepher/mcp';
 import { getAllIntegrations, getIntegration } from '@zepher/integrations';
-import { runSync, importExistingConfigs, ALL_ADAPTERS } from '@zepher/adapters';
+import { runSync, importExistingConfigs, ALL_ADAPTERS, verifySyncDrift, watchZepher } from '@zepher/adapters';
 import { installSkillFromSource, listAllSkills, removeSkill } from '@zepher/skills';
 import { runIntegrationTui } from './tui.js';
 
@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name('zepher')
   .description('Persistent context, memory & universal agent environment manager')
-  .version('0.2.0');
+  .version('0.3.0');
 
 // Init
 program
@@ -70,6 +70,40 @@ program
     }
   });
 
+// Verify Drift Command (CI/CD)
+program
+  .command('verify')
+  .description('Verify that committed agent configuration files are in sync with Zepher state (CI drift check)')
+  .action(async () => {
+    try {
+      console.log(chalk.blue('Checking for configuration drift...'));
+      const res = await verifySyncDrift(process.cwd());
+      if (res.inSync) {
+        console.log(chalk.bold.green(`✓ All ${res.checkedFiles.length} agent configuration file(s) are strictly in sync.`));
+      } else {
+        console.error(chalk.bold.red(`✗ Configuration drift detected in ${res.drifts.length} file(s):`));
+        for (const d of res.drifts) {
+          console.error(chalk.red(`  • ${d.file}: ${d.reason}`));
+        }
+        console.log(chalk.yellow(`\nRun ${chalk.cyan('zepher sync')} to reconcile configurations.`));
+        process.exit(1);
+      }
+    } catch (err: any) {
+      console.error(chalk.red(`Verification error: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
+// Watch Command
+program
+  .command('watch')
+  .description('Watch .zepher/ rules and skills and auto-sync on changes')
+  .action(() => {
+    console.log(chalk.bold.blue('⚡ Zepher Auto-Sync Daemon active. Monitoring .zepher/ for changes...'));
+    console.log(chalk.gray('Press Ctrl+C to stop.\n'));
+    watchZepher(process.cwd());
+  });
+
 // Import Command
 program
   .command('import')
@@ -104,18 +138,26 @@ ruleCmd
   .option('-t, --title <title>', 'Rule title')
   .option('-p, --priority <number>', 'Rule priority (1-100, default 50)', parseInt)
   .option('--tags <tags>', 'Comma-separated tags')
+  .option('--globs <globs>', 'Comma-separated glob patterns (e.g. "src/**/*.ts")')
+  .option('--always-apply', 'Always include rule regardless of active file')
   .option('-g, --global', 'Add to global rules (~/.zepher/rules)')
   .action((content, opts) => {
     const tags = opts.tags ? opts.tags.split(',').map((t: string) => t.trim()) : undefined;
+    const globs = opts.globs ? opts.globs.split(',').map((g: string) => g.trim()) : undefined;
     const { filePath, rule } = addRule({
       content,
       title: opts.title,
       priority: opts.priority,
       tags,
+      globs,
+      alwaysApply: opts.alwaysApply ? true : undefined,
       global: opts.global,
       projectRoot: process.cwd()
     });
     console.log(chalk.green(`✓ Added ${rule.scope} rule: "${rule.title}" (Priority: ${rule.priority})`));
+    if (rule.globs && rule.globs.length > 0) {
+      console.log(chalk.cyan(`  Globs: [${rule.globs.join(', ')}]`));
+    }
     console.log(`Saved to: ${filePath}`);
     console.log(`Run ${chalk.cyan('zepher sync')} to compile this rule into your agent configurations.`);
   });

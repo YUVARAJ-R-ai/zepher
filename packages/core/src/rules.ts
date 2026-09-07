@@ -14,6 +14,8 @@ export function addRule(
     tags?: string[];
     global?: boolean;
     projectRoot?: string;
+    globs?: string[];
+    alwaysApply?: boolean;
   }
 ): { filePath: string; rule: Rule } {
   const baseDir = options.global
@@ -29,12 +31,19 @@ export function addRule(
   const fileName = `${cleanId}.md`;
   const filePath = path.join(baseDir, fileName);
 
-  const frontmatter = {
+  const frontmatter: Record<string, any> = {
     id: cleanId,
     title: options.title || cleanId,
     priority: options.priority ?? 50,
     tags: options.tags || []
   };
+
+  if (options.globs && options.globs.length > 0) {
+    frontmatter.globs = options.globs;
+  }
+  if (typeof options.alwaysApply === 'boolean') {
+    frontmatter.alwaysApply = options.alwaysApply;
+  }
 
   const fileContent = `---\n${yaml.stringify(frontmatter)}---\n\n${options.content.trim()}\n`;
   fs.writeFileSync(filePath, fileContent, 'utf-8');
@@ -46,7 +55,9 @@ export function addRule(
     tags: options.tags || [],
     priority: options.priority ?? 50,
     scope: options.global ? 'global' : 'local',
-    sourceFile: fileName
+    sourceFile: fileName,
+    globs: options.globs,
+    alwaysApply: options.alwaysApply
   };
 
   return { filePath, rule };

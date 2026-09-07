@@ -16,7 +16,9 @@
     "@zepher/decisions": "workspace:*",
     "@zepher/sessions": "workspace:*",
     "@zepher/context": "workspace:*",
-    "@zepher/integrations": "workspace:*"
+    "@zepher/integrations": "workspace:*",
+    "@zepher/skills": "workspace:*",
+    "@zepher/adapters": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

@@ -18,6 +18,14 @@ export function isWatermarked(filePath: string): boolean {
   return content.includes(WATERMARK_HEADER);
 }
 
+export function stripWatermark(content: string): string {
+  const footerIdx = content.indexOf(WATERMARK_FOOTER);
+  if (footerIdx !== -1) {
+    return content.slice(footerIdx + WATERMARK_FOOTER.length).trim();
+  }
+  return content.trim();
+}
+
 export interface WriteCheckResult {
   canWrite: boolean;
   reason?: string;
