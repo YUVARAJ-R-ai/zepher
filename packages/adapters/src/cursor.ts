@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput, FileOutput } from '@zepher/core';
-import { formatHooksPrompt } from './common.js';
+import { formatHooksPrompt, formatVaultPrompt } from './common.js';
 
 export const cursorAdapter: AgentAdapter = {
   id: 'cursor',
@@ -57,6 +57,11 @@ ${rule.content.trim()}
     const hooksSection = formatHooksPrompt(state.hooks);
     if (hooksSection) {
       content += hooksSection;
+    }
+
+    const vaultSection = formatVaultPrompt(projectRoot);
+    if (vaultSection) {
+      content += vaultSection;
     }
 
     if (state.skills.length > 0) {

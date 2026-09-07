@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
-import { formatHooksPrompt } from './common.js';
+import { formatHooksPrompt, formatVaultPrompt } from './common.js';
 
 export const claudeAdapter: AgentAdapter = {
   id: 'claude',
@@ -26,6 +26,11 @@ export const claudeAdapter: AgentAdapter = {
     const hooksSection = formatHooksPrompt(state.hooks);
     if (hooksSection) {
       content += hooksSection + '\n';
+    }
+
+    const vaultSection = formatVaultPrompt(projectRoot);
+    if (vaultSection) {
+      content += vaultSection + '\n';
     }
 
     if (state.skills.length > 0) {
