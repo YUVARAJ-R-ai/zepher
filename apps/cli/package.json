@@ -1,5 +1,5 @@
 {
-  "name": "zepher",
+  "name": "@zepher/cli",
   "version": "0.3.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

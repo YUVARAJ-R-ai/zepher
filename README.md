@@ -86,7 +86,9 @@ Modern AI coding agents (**Claude Code**, **Cursor**, **Windsurf**, **GitHub Cop
 ### 1. Global Installation
 
 ```bash
-npm install -g zepher
+npm install -g zepher-cli
+# or run directly with npx
+npx zepher-cli init
 ```
 
 Verify the installation:

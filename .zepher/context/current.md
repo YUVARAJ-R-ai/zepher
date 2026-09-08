@@ -31,26 +31,26 @@ Always use TypeScript for new packages
 - **ADR-0001: Use Nextjs App Router** (Proposed)
 
 ## Recent Work & Handoffs
-**Latest session handoff (2026-09-08T16-50):**
+**Latest session handoff (2026-09-08T17-08):**
 
-# Agent Handoff - 2026-09-08T16-50
+# Agent Handoff - 2026-09-08T17-08
 
 ## Objective
-Implement Phase 1 & Phase 2 roadmap: context richness, tasks suite, ADR suite, and adapter parity
+Configure zepher-cli package distribution for npm publishing
 
 ## Completed
-Implemented safe regex memory search, two-tier global/local memory search, auto-created memory/context files, dynamic generateContext aggregation, dynamic createHandoff with git status, full task suite (create, complete, block, get, list), full ADR suite (create, list, get), Cursor MCP auto-mounting, Gemini/Windsurf/Copilot prompt parity with import support, CLI task/adr suites, and MCP v2 tools.
+Configured package.json with zepher-cli name, bundle script using esbuild, files whitelist, MIT LICENSE, GitHub Actions publishing workflow, and verified npm pack (48.3 kB standalone bundle).
 
 ## Current State
-- **Branch**: `feature/issue-4-phase-1-and-2-context-tasks-adapters`
+- **Branch**: `main`
 - **Recent Commits**:
-- `7d3fe00 (HEAD -> refs/heads/feature/issue-4-phase-1-and-2-context-tasks-adapters, refs/remotes/origin/main, refs/remotes/origin/HEAD, refs/heads/main) chore: record memory and session handoff for skill versioning`
+- `f481576 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/feature/issue-4-phase-1-and-2-context-tasks-adapters, refs/remotes/origin/HEAD, refs/heads/feature/issue-4-phase-1-and-2-context-tasks-adapters) feat: implement Phase 1 & 2 context richness, tasks suite, ADR suite, and adapter parity (closes #4)`
+- `7d3fe00 chore: record memory and session handoff for skill versioning`
 - `b590141 feat(skills): implement skill frontmatter semver, upstream update, and project pinning`
-- `de5f63b chore(sessions): record session handoff for v0.3.0 release`
 
 ## Repository State
-- Branch: `feature/issue-4-phase-1-and-2-context-tasks-adapters`
-- Uncommitted files: 28 modified/untracked file(s)
+- Branch: `main`
+- Uncommitted files: 7 modified/untracked file(s)
 
 ## Next Steps
 Focus on the highest priority active task listed above.

@@ -1,18 +1,54 @@
 {
-  "name": "zepher",
+  "name": "zepher-cli",
   "version": "0.3.0",
   "private": false,
-  "description": "Persistent context and memory infrastructure for AI coding agents",
+  "description": "Persistent context, memory & universal agent environment manager for AI coding agents",
+  "license": "MIT",
+  "type": "module",
   "bin": {
     "zepher": "./apps/cli/bin/zepher.js"
   },
+  "files": [
+    "apps/cli/bin",
+    "apps/cli/dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YUVARAJ-R-ai/zepher.git"
+  },
+  "homepage": "https://github.com/YUVARAJ-R-ai/zepher#readme",
+  "bugs": {
+    "url": "https://github.com/YUVARAJ-R-ai/zepher/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "coding-agent",
+    "context",
+    "memory",
+    "mcp",
+    "cursor",
+    "claude-code",
+    "gemini",
+    "windsurf",
+    "copilot",
+    "developer-tools"
+  ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && npm run bundle",
+    "bundle": "esbuild apps/cli/src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=apps/cli/dist/index.js",
+    "prepack": "npm run build",
     "test": "vitest run",
     "start": "node ./apps/cli/bin/zepher.js"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
+    "esbuild": "^0.28.2",
     "typescript": "^5.4.5",
     "vitest": "^1.5.0"
   },
