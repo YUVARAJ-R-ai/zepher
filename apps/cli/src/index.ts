@@ -16,7 +16,7 @@ import { createHandoff } from '@zepher/sessions';
 import { runServer } from '@zepher/mcp';
 import { getAllIntegrations, getIntegration } from '@zepher/integrations';
 import { runSync, importExistingConfigs, ALL_ADAPTERS, verifySyncDrift, watchZepher } from '@zepher/adapters';
-import { installSkillFromSource, listAllSkills, removeSkill } from '@zepher/skills';
+import { installSkillFromSource, listAllSkills, removeSkill, harvestAgentSkills, linkAgentSkills } from '@zepher/skills';
 import { runIntegrationTui } from './tui.js';
 
 const program = new Command();
@@ -263,6 +263,55 @@ skillCmd
       console.log(chalk.green(`✓ Removed skill "${name}"`));
     } else {
       console.log(chalk.red(`✗ Skill "${name}" not found.`));
+    }
+  });
+
+skillCmd
+  .command('harvest')
+  .description('Discover and ingest skills from all agent directories (~/.gemini, ~/.claude) into Zepher')
+  .option('-l, --local', 'Harvest into project (.zepher/skills) instead of global (~/.zepher/skills)')
+  .option('--overwrite', 'Overwrite existing skills in Zepher')
+  .action((opts) => {
+    console.log(chalk.blue('Scanning agent directories for skills (~/.gemini, ~/.claude)...'));
+    const res = harvestAgentSkills({
+      global: !opts.local,
+      projectRoot: process.cwd(),
+      overwrite: opts.overwrite
+    });
+    console.log(chalk.bold.green(`\n✓ Discovered ${res.discovered.length} skill(s) across agent directories.`));
+    if (res.harvested.length > 0) {
+      console.log(chalk.green(`✓ Ingested ${res.harvested.length} skill(s) into ${res.destinationDir}:`));
+      res.harvested.forEach(s => console.log(`  • ${s}`));
+    }
+    if (res.skipped.length > 0) {
+      console.log(chalk.yellow(`\nSkipped ${res.skipped.length} already existing skill(s) (use --overwrite to replace):`));
+      res.skipped.forEach(s => console.log(`  • ${s}`));
+    }
+    console.log(`\nRun ${chalk.cyan('zepher skill link')} to wire all agents to these skills.`);
+  });
+
+skillCmd
+  .command('link')
+  .description('Symlink Zepher global skills to Antigravity and Claude Code so all agents share all skills')
+  .option('--copy', 'Copy files instead of creating filesystem symlinks')
+  .action((opts) => {
+    console.log(chalk.blue('Linking skills to Antigravity (~/.gemini/config/skills) and Claude Code (~/.claude/skills)...'));
+    const res = linkAgentSkills({ copy: opts.copy });
+    if (res.linkedCount > 0) {
+      console.log(chalk.bold.green(`\n✓ Successfully linked/updated ${res.linkedCount} skill mapping(s).`));
+    }
+    if (res.targets.length > 0) {
+      const grouped = res.targets.reduce((acc: any, t) => {
+        acc[t.agent] = (acc[t.agent] || 0) + 1;
+        return acc;
+      }, {});
+      Object.entries(grouped).forEach(([agent, count]) => {
+        console.log(chalk.cyan(`  • ${agent}: ${count} skills available`));
+      });
+    }
+    if (res.errors.length > 0) {
+      console.log(chalk.red(`\nWarnings:`));
+      res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
     }
   });
 

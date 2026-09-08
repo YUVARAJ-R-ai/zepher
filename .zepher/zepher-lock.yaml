@@ -5,3 +5,138 @@ skills:
     checksum: b81e2ff87ed8
     installedAt: 2026-09-03T08:22:15.847Z
     scope: global
+  cad-3d-print:
+    source: /home/yuvaraj/.gemini/config/skills/cad-3d-print
+    checksum: 7e233391abb0
+    installedAt: 2026-09-08T02:52:49.176Z
+    scope: global
+  graphify:
+    source: /home/yuvaraj/.gemini/config/skills/graphify
+    checksum: d7f2ca55f0c9
+    installedAt: 2026-09-08T02:52:49.180Z
+    scope: global
+  new-issue:
+    source: /home/yuvaraj/.gemini/config/skills/new-issue
+    checksum: e4307e24c1d8
+    installedAt: 2026-09-08T02:52:49.181Z
+    scope: global
+  pcb-design:
+    source: /home/yuvaraj/.gemini/config/skills/pcb-design
+    checksum: 3c1c9892fd7f
+    installedAt: 2026-09-08T02:52:49.182Z
+    scope: global
+  plan-project:
+    source: /home/yuvaraj/.gemini/config/skills/plan-project
+    checksum: 6a73787517b1
+    installedAt: 2026-09-08T02:52:49.183Z
+    scope: global
+  project-research:
+    source: /home/yuvaraj/.gemini/config/skills/project-research
+    checksum: b3dec034a0f9
+    installedAt: 2026-09-08T02:52:49.192Z
+    scope: global
+  scrum-board:
+    source: /home/yuvaraj/.gemini/config/skills/scrum-board
+    checksum: dd2b938ac13f
+    installedAt: 2026-09-08T02:52:49.193Z
+    scope: global
+  setup-nix-shell:
+    source: /home/yuvaraj/.gemini/config/skills/setup-nix-shell
+    checksum: 2569f536a666
+    installedAt: 2026-09-08T02:52:49.193Z
+    scope: global
+  start-task:
+    source: /home/yuvaraj/.gemini/config/skills/start-task
+    checksum: 06cd2ad4b7d9
+    installedAt: 2026-09-08T02:52:49.194Z
+    scope: global
+  architecture-building:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/architecture-building
+    checksum: 5f9092c7a4cf
+    installedAt: 2026-09-08T02:52:49.195Z
+    scope: global
+  business-pitch-writing:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/business-pitch-writing
+    checksum: 3f0e802efaf1
+    installedAt: 2026-09-08T02:52:49.196Z
+    scope: global
+  deep-research:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/deep-research
+    checksum: 04712f4daa79
+    installedAt: 2026-09-08T02:52:49.197Z
+    scope: global
+  faculty-review-csv:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/faculty-review-csv
+    checksum: a248d6e7e88b
+    installedAt: 2026-09-08T02:52:49.199Z
+    scope: global
+  frontend-aesthetic:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/frontend-aesthetic
+    checksum: 02f3a769181d
+    installedAt: 2026-09-08T02:52:49.201Z
+    scope: global
+  functional-requirements:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/functional-requirements
+    checksum: 37d3517d5ca2
+    installedAt: 2026-09-08T02:52:49.202Z
+    scope: global
+  gamma-ui-style:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/gamma-ui-style
+    checksum: ae2a116d5c32
+    installedAt: 2026-09-08T02:52:49.203Z
+    scope: global
+  implementation-plan-reviewer:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/implementation-plan-reviewer
+    checksum: 91e1f494817a
+    installedAt: 2026-09-08T02:52:49.205Z
+    scope: global
+  non-functional-requirements:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/non-functional-requirements
+    checksum: 68d776a79cf2
+    installedAt: 2026-09-08T02:52:49.206Z
+    scope: global
+  project-review-deck:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/project-review-deck
+    checksum: c40f2d834c7d
+    installedAt: 2026-09-08T02:52:49.208Z
+    scope: global
+  pyq-topic-doc:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/pyq-topic-doc
+    checksum: d50992ccc806
+    installedAt: 2026-09-08T02:52:49.209Z
+    scope: global
+  requirements-analysis:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/requirements-analysis
+    checksum: a0a5534f463d
+    installedAt: 2026-09-08T02:52:49.209Z
+    scope: global
+  sdlc-init:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/sdlc-init
+    checksum: 288bbe2ec178
+    installedAt: 2026-09-08T02:52:49.210Z
+    scope: global
+  se-docs:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/se-docs
+    checksum: 5c28a2369447
+    installedAt: 2026-09-08T02:52:49.213Z
+    scope: global
+  software-inception:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/software-inception
+    checksum: 587bf84342c9
+    installedAt: 2026-09-08T02:52:49.218Z
+    scope: global
+  stakeholder-requirements:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/stakeholder-requirements
+    checksum: 3855b6c14d21
+    installedAt: 2026-09-08T02:52:49.219Z
+    scope: global
+  system-building:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/system-building
+    checksum: b05455b3137d
+    installedAt: 2026-09-08T02:52:49.219Z
+    scope: global
+  vhelpcc-pyq:
+    source: /home/yuvaraj/.gemini/antigravity-cli/skills/vhelpcc-pyq
+    checksum: 2ead99b0c004
+    installedAt: 2026-09-08T02:52:49.221Z
+    scope: global
