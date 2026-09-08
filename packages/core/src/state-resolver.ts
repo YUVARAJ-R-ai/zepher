@@ -115,10 +115,12 @@ export function loadSkillsFromDir(dirPath: string, scope: 'global' | 'local'): S
     const titleMatch = content.match(/^#\s+(.+)$/m);
     const name = data.name || entry;
     const description = data.description || (titleMatch ? titleMatch[1] : name);
+    const version = data.version ? String(data.version) : undefined;
 
     skills.push({
       name,
       description,
+      version,
       trigger: data.trigger,
       scope,
       path: skillDir,
@@ -170,8 +172,18 @@ export function loadHooksFromDir(dirPath: string, scope: 'global' | 'local'): Ho
   return hooks;
 }
 
-export function loadLockfile(projectRoot: string): ZepherLockfile {
-  const lockPath = path.join(projectRoot, ZEPHER_DIR, LOCKFILE_NAME);
+export function getLockfilePath(projectRoot: string, isGlobal = false): string {
+  if (isGlobal || projectRoot === GLOBAL_ZEPHER_DIR) {
+    return path.join(GLOBAL_ZEPHER_DIR, LOCKFILE_NAME);
+  }
+  if (path.basename(projectRoot) === ZEPHER_DIR) {
+    return path.join(projectRoot, LOCKFILE_NAME);
+  }
+  return path.join(projectRoot, ZEPHER_DIR, LOCKFILE_NAME);
+}
+
+export function loadLockfile(projectRoot: string, isGlobal = false): ZepherLockfile {
+  const lockPath = getLockfilePath(projectRoot, isGlobal);
   if (fs.existsSync(lockPath)) {
     try {
       const raw = fs.readFileSync(lockPath, 'utf-8');
@@ -183,8 +195,12 @@ export function loadLockfile(projectRoot: string): ZepherLockfile {
   return { version: '1.0', skills: {} };
 }
 
-export function saveLockfile(projectRoot: string, lockfile: ZepherLockfile): void {
-  const lockPath = path.join(projectRoot, ZEPHER_DIR, LOCKFILE_NAME);
+export function saveLockfile(projectRoot: string, lockfile: ZepherLockfile, isGlobal = false): void {
+  const lockPath = getLockfilePath(projectRoot, isGlobal);
+  const dir = path.dirname(lockPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   fs.writeFileSync(lockPath, yaml.stringify(lockfile), 'utf-8');
 }
 

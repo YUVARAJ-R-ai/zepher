@@ -23,10 +23,34 @@ export function installSkill(projectRoot: string, name: string, content: string)
   return mdPath;
 }
 
+export interface ParsedSkillMetadata {
+  name?: string;
+  description?: string;
+  version?: string;
+  trigger?: string;
+}
+
+export function parseSkillMetadata(content: string): ParsedSkillMetadata {
+  const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fmMatch) {
+    const name = content.match(/^name:\s*([a-zA-Z0-9_.-]+)/m)?.[1]?.trim();
+    const desc = content.match(/^description:\s*([^\r\n]+)/m)?.[1]?.trim();
+    const ver = content.match(/^version:\s*["']?([^"'\r\n]+)["']?/m)?.[1]?.trim();
+    const trig = content.match(/^trigger:\s*([^\r\n]+)/m)?.[1]?.trim();
+    return { name, description: desc, version: ver, trigger: trig };
+  }
+  const fmText = fmMatch[1];
+  const name = fmText.match(/^name:\s*([a-zA-Z0-9_.-]+)/m)?.[1]?.trim();
+  const desc = fmText.match(/^description:\s*([^\r\n]+)/m)?.[1]?.trim();
+  const ver = fmText.match(/^version:\s*["']?([^"'\r\n]+)["']?/m)?.[1]?.trim();
+  const trig = fmText.match(/^trigger:\s*([^\r\n]+)/m)?.[1]?.trim();
+  return { name, description: desc, version: ver, trigger: trig };
+}
+
 export async function installSkillFromSource(
   source: string,
   options: { global?: boolean; projectRoot?: string; name?: string } = {}
-): Promise<{ skillName: string; path: string; checksum: string }> {
+): Promise<{ skillName: string; path: string; checksum: string; version?: string }> {
   const isGlobal = Boolean(options.global);
   const baseDir = isGlobal
     ? path.join(GLOBAL_ZEPHER_DIR, SKILLS_DIR)
@@ -79,9 +103,10 @@ export async function installSkillFromSource(
     }
   }
 
-  // Parse skill name from frontmatter if not specified
-  const nameMatch = content.match(/^name:\s*([a-zA-Z0-9_-]+)/m);
-  const finalName = options.name || (nameMatch ? nameMatch[1] : derivedName) || 'unnamed-skill';
+  // Parse skill metadata from frontmatter
+  const meta = parseSkillMetadata(content);
+  const finalName = options.name || meta.name || derivedName || 'unnamed-skill';
+  const version = meta.version;
 
   const targetDir = path.join(baseDir, finalName);
   if (!fs.existsSync(targetDir)) {
@@ -96,19 +121,21 @@ export async function installSkillFromSource(
 
   // Update lockfile
   const projectRoot = options.projectRoot || process.cwd();
-  const lockfile = loadLockfile(projectRoot);
+  const lockfile = loadLockfile(projectRoot, isGlobal);
   lockfile.skills[finalName] = {
     source,
+    version,
     checksum,
     installedAt: new Date().toISOString(),
     scope: isGlobal ? 'global' : 'local'
   };
-  saveLockfile(projectRoot, lockfile);
+  saveLockfile(projectRoot, lockfile, isGlobal);
 
   return {
     skillName: finalName,
     path: skillFilePath,
-    checksum
+    checksum,
+    version
   };
 }
 
@@ -134,10 +161,10 @@ export function removeSkill(name: string, options: { global?: boolean; projectRo
 
     // Update lockfile
     const projectRoot = options.projectRoot || process.cwd();
-    const lockfile = loadLockfile(projectRoot);
+    const lockfile = loadLockfile(projectRoot, isGlobal);
     if (lockfile.skills[name]) {
       delete lockfile.skills[name];
-      saveLockfile(projectRoot, lockfile);
+      saveLockfile(projectRoot, lockfile, isGlobal);
     }
     return true;
   }
@@ -220,7 +247,7 @@ export function harvestAgentSkills(
   };
 
   const projectRoot = options.projectRoot || process.cwd();
-  const lockfile = loadLockfile(projectRoot);
+  const lockfile = loadLockfile(projectRoot, isGlobal);
 
   for (const loc of searchLocations) {
     if (!fs.existsSync(loc.path)) continue;
@@ -247,11 +274,13 @@ export function harvestAgentSkills(
             result.harvested.push(entry);
           }
 
-          // Compute lockfile entry
+          // Compute lockfile entry with version & checksum
           const content = fs.readFileSync(skillMd, 'utf-8');
           const checksum = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
+          const meta = parseSkillMetadata(content);
           lockfile.skills[entry] = {
             source: fullSkillDir,
+            version: meta.version,
             checksum,
             installedAt: new Date().toISOString(),
             scope: isGlobal ? 'global' : 'local'
@@ -267,7 +296,7 @@ export function harvestAgentSkills(
     }
   }
 
-  saveLockfile(projectRoot, lockfile);
+  saveLockfile(projectRoot, lockfile, isGlobal);
   return result;
 }
 
@@ -356,4 +385,270 @@ export function linkAgentSkills(
   }
 
   return result;
+}
+
+// --- Skill Versioning, Updates & Pinning ---
+
+export interface UpdateSkillResult {
+  skillName: string;
+  updated: boolean;
+  reason?: string;
+  oldVersion?: string;
+  newVersion?: string;
+  oldChecksum?: string;
+  newChecksum?: string;
+  source?: string;
+}
+
+export async function updateSkill(
+  name: string,
+  options: { global?: boolean; projectRoot?: string } = {}
+): Promise<UpdateSkillResult> {
+  const projectRoot = options.projectRoot || process.cwd();
+
+  // If scope not explicitly specified, check local first then global
+  let isGlobal = options.global;
+  if (isGlobal === undefined) {
+    const localLock = loadLockfile(projectRoot, false);
+    if (localLock.skills[name]) {
+      isGlobal = false;
+    } else {
+      const globalLock = loadLockfile(projectRoot, true);
+      if (globalLock.skills[name]) {
+        isGlobal = true;
+      } else {
+        isGlobal = false;
+      }
+    }
+  }
+
+  const baseDir = isGlobal
+    ? path.join(GLOBAL_ZEPHER_DIR, SKILLS_DIR)
+    : path.join(projectRoot, ZEPHER_DIR, SKILLS_DIR);
+
+  const lockfile = loadLockfile(projectRoot, isGlobal);
+  const entry = lockfile.skills[name];
+  const skillDir = path.join(baseDir, name);
+  const skillMdPath = path.join(skillDir, 'SKILL.md');
+
+  if (!fs.existsSync(skillDir) && !entry) {
+    return {
+      skillName: name,
+      updated: false,
+      reason: `Skill "${name}" is not installed in ${isGlobal ? 'global' : 'local'} scope.`
+    };
+  }
+
+  const source = entry?.source;
+  if (!source) {
+    return {
+      skillName: name,
+      updated: false,
+      reason: `No source recorded in lockfile for skill "${name}". Re-install with "zepher skill install <source>".`
+    };
+  }
+
+  const oldChecksum = entry.checksum || (fs.existsSync(skillMdPath) ? crypto.createHash('sha256').update(fs.readFileSync(skillMdPath, 'utf-8')).digest('hex').slice(0, 12) : undefined);
+  const oldVersion = entry.version;
+
+  let newContent = '';
+  if (source.startsWith('http://') || source.startsWith('https://')) {
+    let fetchUrl = source;
+    if (fetchUrl.includes('github.com') && !fetchUrl.includes('raw.githubusercontent.com')) {
+      fetchUrl = fetchUrl
+        .replace('github.com', 'raw.githubusercontent.com')
+        .replace('/blob/', '/');
+      if (!fetchUrl.endsWith('.md') && !fetchUrl.endsWith('SKILL.md')) {
+        fetchUrl = fetchUrl.replace(/\/$/, '') + '/main/SKILL.md';
+      }
+    }
+
+    const res = await fetch(fetchUrl);
+    if (!res.ok) {
+      return {
+        skillName: name,
+        updated: false,
+        reason: `Failed to fetch latest content from ${fetchUrl} (status: ${res.status})`,
+        source
+      };
+    }
+    newContent = await res.text();
+  } else {
+    // Local source
+    const resolvedSource = path.resolve(source);
+    let srcFile = resolvedSource;
+    if (fs.existsSync(resolvedSource) && fs.statSync(resolvedSource).isDirectory()) {
+      srcFile = path.join(resolvedSource, 'SKILL.md');
+    }
+    if (!fs.existsSync(srcFile)) {
+      return {
+        skillName: name,
+        updated: false,
+        reason: `Source path no longer exists: ${srcFile}`,
+        source
+      };
+    }
+    newContent = fs.readFileSync(srcFile, 'utf-8');
+  }
+
+  const newChecksum = crypto.createHash('sha256').update(newContent).digest('hex').slice(0, 12);
+  const meta = parseSkillMetadata(newContent);
+  const newVersion = meta.version;
+
+  if (oldChecksum && newChecksum === oldChecksum && oldVersion === newVersion) {
+    return {
+      skillName: name,
+      updated: false,
+      reason: 'Already up to date',
+      oldVersion,
+      newVersion,
+      oldChecksum,
+      newChecksum,
+      source
+    };
+  }
+
+  // Update files
+  if (!fs.existsSync(skillDir)) {
+    fs.mkdirSync(skillDir, { recursive: true });
+  }
+
+  if (!source.startsWith('http://') && !source.startsWith('https://') && fs.existsSync(source) && fs.statSync(source).isDirectory()) {
+    fs.cpSync(source, skillDir, { recursive: true });
+  } else {
+    fs.writeFileSync(skillMdPath, newContent, 'utf-8');
+  }
+
+  // Update lockfile
+  lockfile.skills[name] = {
+    source,
+    version: newVersion || oldVersion,
+    checksum: newChecksum,
+    installedAt: new Date().toISOString(),
+    scope: isGlobal ? 'global' : 'local'
+  };
+  saveLockfile(projectRoot, lockfile, isGlobal);
+
+  return {
+    skillName: name,
+    updated: true,
+    oldVersion,
+    newVersion: newVersion || oldVersion,
+    oldChecksum,
+    newChecksum,
+    source
+  };
+}
+
+export async function updateAllSkills(
+  options: { global?: boolean; projectRoot?: string } = {}
+): Promise<UpdateSkillResult[]> {
+  const isGlobal = Boolean(options.global);
+  const projectRoot = options.projectRoot || process.cwd();
+  const lockfile = loadLockfile(projectRoot, isGlobal);
+  const skillNames = Object.keys(lockfile.skills);
+
+  const results: UpdateSkillResult[] = [];
+  for (const name of skillNames) {
+    const res = await updateSkill(name, { ...options, global: isGlobal });
+    results.push(res);
+  }
+  return results;
+}
+
+export interface PinSkillResult {
+  skillName: string;
+  success: boolean;
+  message: string;
+  path?: string;
+  version?: string;
+  checksum?: string;
+}
+
+export function pinSkill(
+  name: string,
+  options: { projectRoot?: string } = {}
+): PinSkillResult {
+  const projectRoot = options.projectRoot || process.cwd();
+  const globalSkillDir = path.join(GLOBAL_ZEPHER_DIR, SKILLS_DIR, name);
+  const localSkillsDir = path.join(projectRoot, ZEPHER_DIR, SKILLS_DIR);
+  const localSkillDir = path.join(localSkillsDir, name);
+
+  if (!fs.existsSync(globalSkillDir)) {
+    return {
+      skillName: name,
+      success: false,
+      message: `Skill "${name}" is not installed in global ~/.zepher/skills/`
+    };
+  }
+
+  if (!fs.existsSync(localSkillsDir)) {
+    fs.mkdirSync(localSkillsDir, { recursive: true });
+  }
+
+  // Copy directory recursively
+  fs.cpSync(globalSkillDir, localSkillDir, { recursive: true });
+
+  const skillMd = path.join(localSkillDir, 'SKILL.md');
+  let checksum = '';
+  let version: string | undefined;
+
+  if (fs.existsSync(skillMd)) {
+    const content = fs.readFileSync(skillMd, 'utf-8');
+    checksum = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
+    version = parseSkillMetadata(content).version;
+  }
+
+  // Update local lockfile
+  const localLockfile = loadLockfile(projectRoot, false);
+  const globalLockfile = loadLockfile(projectRoot, true);
+  const globalEntry = globalLockfile.skills[name];
+
+  localLockfile.skills[name] = {
+    source: globalEntry?.source || globalSkillDir,
+    version: version || globalEntry?.version,
+    checksum: checksum || globalEntry?.checksum || '',
+    installedAt: new Date().toISOString(),
+    scope: 'local'
+  };
+  saveLockfile(projectRoot, localLockfile, false);
+
+  return {
+    skillName: name,
+    success: true,
+    message: `Pinned skill "${name}"${version ? ` (v${version})` : ''} into .zepher/skills/`,
+    path: localSkillDir,
+    version: version || globalEntry?.version,
+    checksum
+  };
+}
+
+export function unpinSkill(
+  name: string,
+  options: { projectRoot?: string } = {}
+): { skillName: string; success: boolean; message: string } {
+  const projectRoot = options.projectRoot || process.cwd();
+  const localSkillDir = path.join(projectRoot, ZEPHER_DIR, SKILLS_DIR, name);
+
+  if (!fs.existsSync(localSkillDir)) {
+    return {
+      skillName: name,
+      success: false,
+      message: `Skill "${name}" is not pinned in project .zepher/skills/`
+    };
+  }
+
+  fs.rmSync(localSkillDir, { recursive: true, force: true });
+
+  const localLockfile = loadLockfile(projectRoot, false);
+  if (localLockfile.skills[name]) {
+    delete localLockfile.skills[name];
+    saveLockfile(projectRoot, localLockfile, false);
+  }
+
+  return {
+    skillName: name,
+    success: true,
+    message: `Unpinned skill "${name}". Project now inherits global version.`
+  };
 }

@@ -16,7 +16,10 @@ import { createHandoff } from '@zepher/sessions';
 import { runServer } from '@zepher/mcp';
 import { getAllIntegrations, getIntegration } from '@zepher/integrations';
 import { runSync, importExistingConfigs, ALL_ADAPTERS, verifySyncDrift, watchZepher } from '@zepher/adapters';
-import { installSkillFromSource, listAllSkills, removeSkill, harvestAgentSkills, linkAgentSkills } from '@zepher/skills';
+import { 
+  installSkillFromSource, listAllSkills, removeSkill, harvestAgentSkills, linkAgentSkills,
+  updateSkill, updateAllSkills, pinSkill, unpinSkill 
+} from '@zepher/skills';
 import { runIntegrationTui } from './tui.js';
 
 const program = new Command();
@@ -233,23 +236,105 @@ skillCmd
 
 skillCmd
   .command('list')
-  .description('List all installed skills')
+  .description('List all installed skills with versions and provenance')
   .action(() => {
     const { global, local } = listAllSkills(process.cwd());
     console.log(chalk.bold.blue('\nGlobal Skills (~/.zepher/skills):'));
     if (global.length === 0) {
       console.log(chalk.gray('  (No global skills installed)'));
     } else {
-      global.forEach(s => console.log(`  • ${chalk.bold(s.name)} - ${chalk.gray(s.description)}`));
+      global.forEach(s => {
+        const verStr = s.version ? chalk.cyan(` (v${s.version})`) : '';
+        console.log(`  • ${chalk.bold(s.name)}${verStr} - ${chalk.gray(s.description)}`);
+      });
     }
 
     console.log(chalk.bold.blue('\nLocal Project Skills (.zepher/skills):'));
     if (local.length === 0) {
       console.log(chalk.gray('  (No local skills installed)'));
     } else {
-      local.forEach(s => console.log(`  • ${chalk.bold(s.name)} - ${chalk.gray(s.description)}`));
+      local.forEach(s => {
+        const verStr = s.version ? chalk.cyan(` (v${s.version})`) : '';
+        console.log(`  • ${chalk.bold(s.name)}${verStr} - ${chalk.gray(s.description)}`);
+      });
     }
     console.log();
+  });
+
+skillCmd
+  .command('update [name]')
+  .description('Update an installed skill (or all skills) from its upstream source')
+  .option('-a, --all', 'Update all installed skills')
+  .option('-g, --global', 'Target global scope (~/.zepher/skills)')
+  .action(async (name, opts) => {
+    try {
+      if (opts.all || !name) {
+        console.log(chalk.blue(`Checking updates for all ${opts.global ? 'global' : 'installed'} skills...`));
+        const results = await updateAllSkills({ global: opts.global, projectRoot: process.cwd() });
+        if (results.length === 0) {
+          console.log(chalk.gray('No skills tracked in lockfile to update.'));
+          return;
+        }
+        let updatedCount = 0;
+        for (const r of results) {
+          if (r.updated) {
+            updatedCount++;
+            const verBump = r.oldVersion && r.newVersion && r.oldVersion !== r.newVersion
+              ? ` (${chalk.yellow(r.oldVersion)} -> ${chalk.green(r.newVersion)})`
+              : r.newVersion ? ` (v${r.newVersion})` : '';
+            console.log(chalk.green(`✓ Updated "${r.skillName}"${verBump} [${r.oldChecksum} -> ${r.newChecksum}]`));
+          } else {
+            console.log(chalk.gray(`• "${r.skillName}": ${r.reason || 'Up to date'}`));
+          }
+        }
+        console.log(chalk.bold.blue(`\nSummary: ${updatedCount} updated, ${results.length - updatedCount} up to date.`));
+      } else {
+        console.log(chalk.blue(`Checking for updates to "${name}"...`));
+        const res = await updateSkill(name, { global: opts.global, projectRoot: process.cwd() });
+        if (res.updated) {
+          const verBump = res.oldVersion && res.newVersion && res.oldVersion !== res.newVersion
+            ? ` (v${res.oldVersion} -> v${res.newVersion})`
+            : res.newVersion ? ` (v${res.newVersion})` : '';
+          console.log(chalk.bold.green(`✓ Successfully updated "${res.skillName}"${verBump}!`));
+          console.log(`  Checksum: ${res.oldChecksum} -> ${res.newChecksum}`);
+          if (res.source) console.log(`  Source: ${res.source}`);
+        } else {
+          console.log(chalk.yellow(`• "${res.skillName}": ${res.reason || 'Already up to date'}`));
+        }
+      }
+    } catch (err: any) {
+      console.error(chalk.red(`Failed to update skill: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('pin <name>')
+  .description('Pin a global skill to the current project repo (.zepher/skills) to freeze its version')
+  .action((name) => {
+    const res = pinSkill(name, { projectRoot: process.cwd() });
+    if (res.success) {
+      console.log(chalk.bold.green(`✓ ${res.message}`));
+      console.log(`Path: ${res.path}`);
+      if (res.checksum) console.log(`Checksum: ${res.checksum}`);
+      console.log(chalk.gray('This repository will now use this pinned skill instead of inheriting global updates.'));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('unpin <name>')
+  .description('Unpin a project skill to revert to inheriting the global version')
+  .action((name) => {
+    const res = unpinSkill(name, { projectRoot: process.cwd() });
+    if (res.success) {
+      console.log(chalk.bold.green(`✓ ${res.message}`));
+    } else {
+      console.error(chalk.red(`✗ ${res.message}`));
+      process.exit(1);
+    }
   });
 
 skillCmd

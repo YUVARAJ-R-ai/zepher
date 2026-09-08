@@ -14,6 +14,7 @@ export interface Rule {
 export interface SkillMeta {
   name: string;
   description: string;
+  version?: string;
   trigger?: string;
   scope: 'global' | 'local';
   path: string;           // Directory path containing SKILL.md

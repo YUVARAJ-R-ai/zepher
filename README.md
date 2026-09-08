@@ -248,6 +248,28 @@ zepher skill link
 - **Instant Two-Way Synchronization:** Edit a skill once in `~/.zepher/skills/` (or from within Antigravity / Claude Code) and the update is immediately live for all other agents.
 - **Zero Disk Waste:** Avoids cloning multiple copies of large skills. Use `--copy` if your environment requires physical duplication.
 
+### 3. Skill Versioning & Upstream Updates (`zepher skill update`)
+Keep installed skills fresh with semantic versioning and SHA-256 lockfile tracking:
+```bash
+# Update a specific skill from its remote GitHub or local source
+zepher skill update frontend-aesthetic
+
+# Update all installed skills at once
+zepher skill update --all
+```
+- **Frontmatter SemVer:** Automatically extracts `version: x.y.z` from `SKILL.md` frontmatter.
+- **Integrity Validation:** Compares cryptographic checksums and updates `zepher-lock.yaml`.
+
+### 4. Pinned Project Snapshots (`zepher skill pin`)
+Freeze a project's skills to prevent breaking global changes from affecting production:
+```bash
+# Pin a global skill to the current project repo (.zepher/skills/)
+zepher skill pin react-best-practices
+
+# Revert to inheriting the global version
+zepher skill unpin react-best-practices
+```
+
 ---
 
 ## 📖 Command Reference
@@ -291,7 +313,10 @@ zepher skill link
 | `zepher skill harvest [-l] [--overwrite]` | Discover and ingest skills from all agent directories into Zepher |
 | `zepher skill link [--copy]` | Symlink Zepher skills to Antigravity, Claude Code, and Cursor |
 | `zepher skill install <source> [-n <name>] [-g]` | Install a skill from local path or remote GitHub repository |
-| `zepher skill list` | List all installed skills, locations, and provenance |
+| `zepher skill update [name] [-a] [-g]` | Update an installed skill (or all skills) from upstream source |
+| `zepher skill pin <name>` | Freeze a global skill inside project `.zepher/skills/` |
+| `zepher skill unpin <name>` | Unpin a skill to resume inheriting the global version |
+| `zepher skill list` | List all installed skills, locations, versions, and provenance |
 | `zepher skill remove <name> [-g]` | Remove an installed skill |
 
 ### 🪝 Lifecycle Hooks (`zepher hook`)
