@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/YUVARAJ-R-ai/zepher.git"
+    "url": "git+https://github.com/YUVARAJ-R-ai/zepher.git"
   },
   "homepage": "https://github.com/YUVARAJ-R-ai/zepher#readme",
   "bugs": {
