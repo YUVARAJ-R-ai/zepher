@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "zepher": "./apps/cli/bin/zepher.js"
+    "zepher": "apps/cli/bin/zepher.js"
   },
   "files": [
     "apps/cli/bin",
