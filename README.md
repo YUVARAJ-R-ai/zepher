@@ -328,13 +328,29 @@ zepher skill unpin react-best-practices
 | `zepher hook install-git` | Install Zepher pre-commit bridge into `.git/hooks/` |
 | `zepher hook uninstall-git` | Remove Zepher bridge from `.git/hooks/` |
 
-### 📝 Context & Memory
+### 📝 Tasks (`zepher task`)
 | Command | Description |
 |---|---|
-| `zepher remember "<fact>" -t <type>` | Record persistent fact (`architecture`, `conventions`, `constraints`, `lessons`) |
-| `zepher recall "<query>"` | Semantic lookup across stored memory |
-| `zepher context` | Generate structured markdown summary of project state |
-| `zepher handoff` | Create an actionable session handoff note for the next agent |
+| `zepher task create <name> [-o <obj>]` | Create a new active task in `.zepher/tasks/active/` |
+| `zepher task list [-s <status>]` | List tasks by status (`active`, `completed`, `blocked`, `all`) |
+| `zepher task show <id>` | View task details and progress |
+| `zepher task complete <id>` | Mark task as completed (moves to `.zepher/tasks/completed/`) |
+| `zepher task block <id> [-r <reason>]` | Mark task as blocked with reason (moves to `.zepher/tasks/blocked/`) |
+
+### 🏛️ Architecture Decisions (`zepher adr`)
+| Command | Description |
+|---|---|
+| `zepher adr create <title> [options]` | Record an Architectural Decision Record in `.zepher/decisions/` |
+| `zepher adr list` | List all recorded ADRs with status and dates |
+| `zepher adr show <query>` | View full ADR details by ID, number, or title slug |
+
+### 📝 Context, Memory & Sessions
+| Command | Description |
+|---|---|
+| `zepher remember "<fact>" -t <type> [-g]` | Record persistent fact (`architecture`, `conventions`, `constraints`, `lessons`). Pass `-g` for global memory |
+| `zepher recall "<query>"` | Safe regex search across local and global memory stores |
+| `zepher context` | Generate dynamic composite markdown summary of project state, active tasks, blockers, and ADRs |
+| `zepher handoff [options]` | Create an actionable session handoff note auto-populated with git branch, status, commits, and tasks |
 | `zepher doctor` | Validate health of context, files, and integrations |
 | `zepher capabilities` | Print matrix of active core features and integrations |
 
@@ -342,14 +358,14 @@ zepher skill unpin react-best-practices
 
 ## 🤖 MCP Server v2
 
-Zepher runs as a Model Context Protocol (MCP) server so your AI agent can query rules, memory, and tasks programmatically:
+Zepher runs as a Model Context Protocol (MCP) server so your AI agent can query rules, memory, tasks, and ADRs programmatically:
 
 ```bash
 zepher mcp
 ```
 
 ### Auto-Configuration
-When you run `zepher sync`, Zepher **automatically updates `.claude.json`** using safe deep JSON merging to mount the Zepher MCP server:
+When you run `zepher sync`, Zepher **automatically updates `.claude.json` and `.cursor/mcp.json`** using safe deep JSON merging to mount the Zepher MCP server:
 
 ```json
 {
@@ -366,15 +382,19 @@ When you run `zepher sync`, Zepher **automatically updates `.claude.json`** usin
 
 | Tool | Description |
 |---|---|
-| `zepher_project_context` | Retrieve composite architectural summary, tasks, and conventions. |
+| `zepher_project_context` | Retrieve composite architectural summary, tasks, blockers, ADRs, and conventions. |
 | `zepher_get_rules` | Query all active engineering rules and constraints (with priorities and globs). |
 | `zepher_add_rule` | Programmatically register a new engineering rule from within an agent conversation. |
 | `zepher_list_skills` | List all installed portable agent skills across global and project scopes. |
 | `zepher_sync` | Programmatically trigger synchronization of agent configurations. |
-| `zepher_search_memory` | Search persistent memory facts and architectural notes. |
+| `zepher_search_memory` | Safe two-tier search across persistent local and global memory notes. |
 | `zepher_write_memory` | Append new discoveries, constraints, and conventions to memory. |
 | `zepher_task_create` | Create a new project task in `.zepher/tasks/active/`. |
 | `zepher_task_list` | List active project tasks. |
+| `zepher_task_complete` | Mark an active or blocked task as completed. |
+| `zepher_task_block` | Mark a task as blocked with an optional reason. |
+| `zepher_decision_create` | Record an Architectural Decision Record (ADR). |
+| `zepher_decision_list` | List recorded Architectural Decision Records (ADRs). |
 | `zepher_generate_handoff` | Create an actionable handoff note for the next agent session. |
 
 ---
@@ -383,7 +403,7 @@ When you run `zepher sync`, Zepher **automatically updates `.claude.json`** usin
 
 | Vendor | Target Configuration | MCP Support | Hook Injection | Scoped Globs |
 |---|---|:---:|:---:|:---:|
-| **Cursor** | `.cursorrules` / `.cursor/rules/*.mdc` | Planned | ✅ | ✅ Native |
+| **Cursor** | `.cursorrules` / `.cursor/rules/*.mdc` / `.cursor/mcp.json` | ✅ Native | ✅ | ✅ Native |
 | **Claude Code** | `CLAUDE.md` / `.claude.json` / `~/.claude/skills` | ✅ Native | ✅ | ✅ |
 | **Gemini / Antigravity** | `.gemini/rules/` / `~/.gemini/config/skills` | ✅ Native | ✅ | ✅ |
 | **Windsurf** | `.windsurfrules` | Planned | ✅ | Planned |

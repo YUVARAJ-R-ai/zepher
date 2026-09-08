@@ -3,8 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { saveMemory, searchMemory, readMemory } from '@zepher/memory';
 import { generateContext } from '@zepher/context';
-import { createTask, listTasks } from '@zepher/tasks';
-import { createDecision } from '@zepher/decisions';
+import { createTask, listTasks, completeTask, blockTask } from '@zepher/tasks';
+import { createDecision, listDecisions } from '@zepher/decisions';
 import { createHandoff } from '@zepher/sessions';
 import { getStatus, resolveUnifiedState, addRule } from '@zepher/core';
 import { getAllIntegrations } from '@zepher/integrations';
@@ -38,6 +38,39 @@ const TOOLS: Tool[] = [
   {
     name: 'zepher_task_list',
     description: 'List active project tasks',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
+  },
+  {
+    name: 'zepher_task_complete',
+    description: 'Mark an active or blocked task as completed',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' }, taskId: { type: 'string' } }, required: ['projectRoot', 'taskId'] }
+  },
+  {
+    name: 'zepher_task_block',
+    description: 'Mark a task as blocked with an optional reason',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' }, taskId: { type: 'string' }, reason: { type: 'string' } }, required: ['projectRoot', 'taskId'] }
+  },
+  {
+    name: 'zepher_decision_create',
+    description: 'Record an Architectural Decision Record (ADR)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: { type: 'string' },
+        title: { type: 'string' },
+        status: { type: 'string', enum: ['Proposed', 'Accepted', 'Deprecated', 'Superseded'] },
+        context: { type: 'string' },
+        decision: { type: 'string' },
+        alternatives: { type: 'string' },
+        tradeoffs: { type: 'string' },
+        consequences: { type: 'string' }
+      },
+      required: ['projectRoot', 'title']
+    }
+  },
+  {
+    name: 'zepher_decision_list',
+    description: 'List recorded Architectural Decision Records (ADRs)',
     inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
   },
   {
@@ -108,6 +141,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: 'text', text: createTask(projectRoot, String(args.name)) }] };
       case 'zepher_task_list':
         return { content: [{ type: 'text', text: JSON.stringify(listTasks(projectRoot, 'active')) }] };
+      case 'zepher_task_complete':
+        return { content: [{ type: 'text', text: completeTask(projectRoot, String(args.taskId)) ? 'Completed' : 'Task not found' }] };
+      case 'zepher_task_block':
+        return { content: [{ type: 'text', text: blockTask(projectRoot, String(args.taskId), args.reason ? String(args.reason) : undefined) ? 'Blocked' : 'Task not found' }] };
+      case 'zepher_decision_create': {
+        const adrFile = createDecision(projectRoot, String(args.title), {
+          status: args.status as any,
+          context: args.context ? String(args.context) : undefined,
+          decision: args.decision ? String(args.decision) : undefined,
+          alternatives: args.alternatives ? String(args.alternatives) : undefined,
+          tradeoffs: args.tradeoffs ? String(args.tradeoffs) : undefined,
+          consequences: args.consequences ? String(args.consequences) : undefined
+        });
+        return { content: [{ type: 'text', text: adrFile }] };
+      }
+      case 'zepher_decision_list':
+        return { content: [{ type: 'text', text: JSON.stringify(listDecisions(projectRoot), null, 2) }] };
       case 'zepher_generate_handoff':
         return { content: [{ type: 'text', text: createHandoff(projectRoot) }] };
       case 'zepher_get_rules': {

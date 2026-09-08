@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { cursorAdapter } from './cursor.js';
 import { claudeAdapter } from './claude.js';
+import { geminiAdapter } from './gemini.js';
+import { windsurfAdapter } from './windsurf.js';
+import { copilotAdapter } from './copilot.js';
 import { UnifiedZepherState } from '@zepher/core';
 
 describe('Vendor Adapters Compilation', () => {
@@ -96,5 +99,50 @@ describe('Vendor Adapters Compilation', () => {
     const mainRules = output.files.find(f => f.path === '.cursorrules');
     expect(mainRules?.content).toContain('No Any Type');
     expect(mainRules?.content).not.toContain('React Components Rule');
+  });
+
+  it('compiles cursor rules with .cursor/mcp.json merge', async () => {
+    const output = await cursorAdapter.compile(dummyState, '/test-app');
+    expect(output.jsonMerges).toBeDefined();
+    expect(output.jsonMerges?.some(m => m.path === '.cursor/mcp.json')).toBe(true);
+    const cursorMcp = output.jsonMerges?.find(m => m.path === '.cursor/mcp.json');
+    expect(cursorMcp?.patch.mcpServers.zepher.command).toBe('zepher');
+  });
+
+  it('compiles and imports gemini rules with hooks and skills', async () => {
+    const output = await geminiAdapter.compile(dummyState, '/test-app');
+    expect(output.files[0].path).toBe('.gemini/rules/zepher-rules.md');
+    expect(output.files[0].content).toContain('No Any Type');
+    expect(output.files[0].content).toContain('testing');
+
+    if (geminiAdapter.import) {
+      const imported = await geminiAdapter.import(output.files[0].content, output.files[0].path);
+      expect(imported.rules?.length).toBeGreaterThan(0);
+      expect(imported.rules?.[0].title).toBe('No Any Type');
+    }
+  });
+
+  it('compiles and imports windsurf rules', async () => {
+    const output = await windsurfAdapter.compile(dummyState, '/test-app');
+    expect(output.files[0].path).toBe('.windsurfrules');
+    expect(output.files[0].content).toContain('**No Any Type**');
+
+    if (windsurfAdapter.import) {
+      const imported = await windsurfAdapter.import(output.files[0].content, output.files[0].path);
+      expect(imported.rules?.length).toBe(1);
+      expect(imported.rules?.[0].title).toBe('No Any Type');
+    }
+  });
+
+  it('compiles and imports copilot instructions', async () => {
+    const output = await copilotAdapter.compile(dummyState, '/test-app');
+    expect(output.files[0].path).toBe('.github/copilot-instructions.md');
+    expect(output.files[0].content).toContain('No Any Type');
+
+    if (copilotAdapter.import) {
+      const imported = await copilotAdapter.import(output.files[0].content, output.files[0].path);
+      expect(imported.rules?.length).toBe(1);
+      expect(imported.rules?.[0].title).toBe('No Any Type');
+    }
   });
 });

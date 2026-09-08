@@ -10,8 +10,8 @@ import {
 } from '@zepher/core';
 import { saveMemory, searchMemory } from '@zepher/memory';
 import { generateContext } from '@zepher/context';
-import { createTask, listTasks } from '@zepher/tasks';
-import { createDecision } from '@zepher/decisions';
+import { createTask, listTasks, completeTask, blockTask, getTask } from '@zepher/tasks';
+import { createDecision, listDecisions, getDecision } from '@zepher/decisions';
 import { createHandoff } from '@zepher/sessions';
 import { runServer } from '@zepher/mcp';
 import { getAllIntegrations, getIntegration } from '@zepher/integrations';
@@ -44,10 +44,184 @@ program
 
 program.command('status').description('Show status').action(() => { getStatus(process.cwd()); });
 program.command('doctor').description('Check health').action(() => { runDoctor(process.cwd()); });
-program.command('remember').argument('<text>').option('-t, --type <type>', 'Type', 'conventions').action((t, o) => { saveMemory(process.cwd(), o.type, t); });
-program.command('recall').argument('<query>').action((q) => console.log(searchMemory(process.cwd(), q)));
-program.command('context').action(() => { generateContext(process.cwd()); });
-program.command('handoff').action(() => { createHandoff(process.cwd()); });
+program
+  .command('remember')
+  .argument('<text>', 'Information or rule to remember')
+  .option('-t, --type <type>', 'Memory category (conventions, architecture, project, constraints, lessons)', 'conventions')
+  .option('-g, --global', 'Store in global Zepher memory (~/.zepher/memory)')
+  .description('Save knowledge, conventions, or decisions into persistent memory')
+  .action((text, options) => {
+    saveMemory(process.cwd(), options.type, text, { global: options.global });
+    console.log(chalk.green(`✓ Saved to ${options.global ? 'global' : 'local'} memory [${options.type}]`));
+  });
+
+program
+  .command('recall')
+  .argument('<query>', 'Search term')
+  .description('Search persistent memory across local and global stores')
+  .action((query) => {
+    const results = searchMemory(process.cwd(), query);
+    if (results.length === 0) {
+      console.log(chalk.gray(`No memories matching "${query}".`));
+      return;
+    }
+    console.log(chalk.bold(`Found ${results.length} memory match(es):`));
+    for (const r of results) {
+      const scopeBadge = r.scope === 'global' ? chalk.cyan('[global]') : chalk.magenta('[local]');
+      console.log(`\n${scopeBadge} ${chalk.bold(r.file)}:`);
+      console.log(chalk.gray(r.content));
+    }
+  });
+
+program
+  .command('context')
+  .description('Generate and refresh .zepher/context/current.md')
+  .action(() => {
+    generateContext(process.cwd());
+    console.log(chalk.green('✓ Generated composite context in .zepher/context/current.md'));
+  });
+
+program
+  .command('handoff')
+  .description('Create an agent session handoff artifact')
+  .option('-o, --objective <text>', 'Session objective')
+  .option('-c, --completed <text>', 'Summary of work completed')
+  .option('-b, --blockers <text>', 'Known blockers or failed approaches')
+  .option('-n, --notes <text>', 'Key discoveries or notes')
+  .option('-a, --next <text>', 'Recommended next action')
+  .action((options) => {
+    const fileName = createHandoff(process.cwd(), {
+      objective: options.objective,
+      completed: options.completed,
+      blockers: options.blockers,
+      notes: options.notes,
+      nextActions: options.next
+    });
+    console.log(chalk.green(`✓ Session handoff created: .zepher/handoffs/${fileName}`));
+  });
+
+// Task command suite
+const taskCmd = program.command('task').description('Manage persistent agent tasks in .zepher/tasks/');
+
+taskCmd
+  .command('create')
+  .argument('<name>', 'Task name or title')
+  .option('-o, --objective <text>', 'Task objective')
+  .description('Create an active task')
+  .action((name, options) => {
+    const id = createTask(process.cwd(), name, { objective: options.objective });
+    console.log(chalk.green(`✓ Created active task: ${id} (.zepher/tasks/active/${id}.md)`));
+  });
+
+taskCmd
+  .command('list')
+  .option('-s, --status <status>', 'Filter by status: active, completed, blocked, all', 'active')
+  .description('List tasks')
+  .action((options) => {
+    const tasks = listTasks(process.cwd(), options.status as any);
+    if (tasks.length === 0) {
+      console.log(chalk.gray(`No tasks found with status: ${options.status}`));
+      return;
+    }
+    console.log(chalk.bold(`Tasks (${options.status}):`));
+    for (const t of tasks) {
+      console.log(`- ${t}`);
+    }
+  });
+
+taskCmd
+  .command('show')
+  .argument('<id>', 'Task ID')
+  .description('View task details')
+  .action((id) => {
+    const task = getTask(process.cwd(), id);
+    if (!task) {
+      console.log(chalk.red(`Task not found: ${id}`));
+      return;
+    }
+    console.log(chalk.bold(`Task: ${task.title} [Status: ${task.status}]`));
+    console.log(chalk.gray(`File: ${task.filePath}\n`));
+    console.log(task.content);
+  });
+
+taskCmd
+  .command('complete')
+  .argument('<id>', 'Task ID to complete')
+  .description('Mark a task as completed')
+  .action((id) => {
+    const ok = completeTask(process.cwd(), id);
+    if (ok) {
+      console.log(chalk.green(`✓ Task completed: ${id} (moved to .zepher/tasks/completed/)`));
+    } else {
+      console.log(chalk.red(`Task not found: ${id}`));
+    }
+  });
+
+taskCmd
+  .command('block')
+  .argument('<id>', 'Task ID to block')
+  .option('-r, --reason <reason>', 'Reason for blocking')
+  .description('Mark a task as blocked')
+  .action((id, options) => {
+    const ok = blockTask(process.cwd(), id, options.reason);
+    if (ok) {
+      console.log(chalk.yellow(`⚠ Task marked as blocked: ${id} (moved to .zepher/tasks/blocked/)`));
+    } else {
+      console.log(chalk.red(`Task not found: ${id}`));
+    }
+  });
+
+// ADR command suite
+const adrCmd = program.command('adr').description('Manage Architectural Decision Records in .zepher/decisions/');
+
+adrCmd
+  .command('create')
+  .argument('<title>', 'Decision title')
+  .option('-s, --status <status>', 'Status (Proposed, Accepted, Deprecated, Superseded)', 'Proposed')
+  .option('-c, --context <text>', 'Context behind the decision')
+  .option('-d, --decision <text>', 'The decision made')
+  .option('-a, --alternatives <text>', 'Alternatives considered')
+  .description('Create an Architectural Decision Record (ADR)')
+  .action((title, options) => {
+    const fileName = createDecision(process.cwd(), title, {
+      status: options.status as any,
+      context: options.context,
+      decision: options.decision,
+      alternatives: options.alternatives
+    });
+    console.log(chalk.green(`✓ Created ADR: .zepher/decisions/${fileName}`));
+  });
+
+adrCmd
+  .command('list')
+  .description('List all Architectural Decision Records (ADRs)')
+  .action(() => {
+    const adrs = listDecisions(process.cwd());
+    if (adrs.length === 0) {
+      console.log(chalk.gray('No ADRs recorded in .zepher/decisions/ yet.'));
+      return;
+    }
+    console.log(chalk.bold(`Architectural Decision Records (${adrs.length}):`));
+    for (const adr of adrs) {
+      const statusBadge = adr.status === 'Accepted' ? chalk.green(`[${adr.status}]`) : chalk.yellow(`[${adr.status}]`);
+      console.log(`${chalk.cyan(adr.id)} ${statusBadge} ${adr.title} (${adr.date || 'No date'})`);
+    }
+  });
+
+adrCmd
+  .command('show')
+  .argument('<query>', 'ADR number, ID, or title snippet')
+  .description('View an Architectural Decision Record')
+  .action((query) => {
+    const adr = getDecision(process.cwd(), query);
+    if (!adr) {
+      console.log(chalk.red(`ADR not found matching: ${query}`));
+      return;
+    }
+    console.log(chalk.bold(`=== ${adr.fileName} ===\n`));
+    console.log(adr.content);
+  });
+
 program.command('mcp').action(async () => { await runServer(); });
 
 // Sync Command

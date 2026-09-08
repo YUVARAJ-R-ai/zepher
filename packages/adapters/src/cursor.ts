@@ -7,7 +7,7 @@ import { formatHooksPrompt, formatVaultPrompt } from './common.js';
 export const cursorAdapter: AgentAdapter = {
   id: 'cursor',
   name: 'Cursor',
-  targetFiles: ['.cursorrules', '.cursor/rules/'],
+  targetFiles: ['.cursorrules', '.cursor/rules/', '.cursor/mcp.json'],
   detect(projectRoot: string) {
     return fs.existsSync(path.join(projectRoot, '.cursorrules')) ||
       fs.existsSync(path.join(projectRoot, '.cursor'));
@@ -83,7 +83,22 @@ ${rule.content.trim()}
       content: content.trim() + '\n'
     });
 
-    return { files };
+    return {
+      files,
+      jsonMerges: [
+        {
+          path: '.cursor/mcp.json',
+          patch: {
+            mcpServers: {
+              zepher: {
+                command: 'zepher',
+                args: ['mcp']
+              }
+            }
+          }
+        }
+      ]
+    };
   },
   import(content: string, filePath: string): Partial<UnifiedZepherState> {
     const rules = [];

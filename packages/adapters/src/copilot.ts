@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
-import { formatHooksPrompt } from './common.js';
+import { formatHooksPrompt, formatVaultPrompt } from './common.js';
 
 export const copilotAdapter: AgentAdapter = {
   id: 'copilot',
@@ -26,6 +26,23 @@ export const copilotAdapter: AgentAdapter = {
       content += hooksSection + '\n';
     }
 
+    const vaultSection = formatVaultPrompt(projectRoot);
+    if (vaultSection) {
+      content += vaultSection + '\n';
+    }
+
+    if (state.skills.length > 0) {
+      content += `## Project Skills & Workflows\n\n`;
+      for (const skill of state.skills) {
+        content += `- **${skill.name}**: ${skill.description}\n`;
+      }
+      content += '\n';
+    }
+
+    content += `## Zepher Context\n`;
+    content += `- Check .zepher/context/current.md for project state and conventions.\n`;
+    content += `- Refer to .zepher/tasks/active/ for current task assignments.\n`;
+
     return {
       files: [
         {
@@ -34,5 +51,54 @@ export const copilotAdapter: AgentAdapter = {
         }
       ]
     };
+  },
+  import(content: string, filePath: string): Partial<UnifiedZepherState> {
+    const rules = [];
+    const lines = content.split('\n');
+    let currentTitle = '';
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith('### ')) {
+        if (currentTitle && currentContent.length > 0) {
+          rules.push({
+            id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+            title: currentTitle,
+            content: currentContent.join('\n').trim(),
+            scope: 'local' as const,
+            priority: 50
+          });
+          currentContent = [];
+        }
+        currentTitle = line.replace(/^###\s+/, '').trim();
+      } else if (line.startsWith('## ') || line.startsWith('# ')) {
+        if (currentTitle && currentContent.length > 0) {
+          rules.push({
+            id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+            title: currentTitle,
+            content: currentContent.join('\n').trim(),
+            scope: 'local' as const,
+            priority: 50
+          });
+          currentContent = [];
+          currentTitle = '';
+        }
+      } else if (currentTitle) {
+        currentContent.push(line);
+      }
+    }
+
+    if (currentTitle && currentContent.length > 0) {
+      rules.push({
+        id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+        title: currentTitle,
+        content: currentContent.join('\n').trim(),
+        scope: 'local' as const,
+        priority: 50
+      });
+    }
+
+    return { rules };
   }
 };
+

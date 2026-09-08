@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { AgentAdapter, UnifiedZepherState, AdapterOutput } from '@zepher/core';
+import { formatHooksPrompt, formatVaultPrompt } from './common.js';
 
 export const geminiAdapter: AgentAdapter = {
   id: 'gemini',
@@ -19,6 +20,30 @@ export const geminiAdapter: AgentAdapter = {
       }
     }
 
+    const hooksSection = formatHooksPrompt(state.hooks);
+    if (hooksSection) {
+      content += hooksSection + '\n';
+    }
+
+    const vaultSection = formatVaultPrompt(projectRoot);
+    if (vaultSection) {
+      content += vaultSection + '\n';
+    }
+
+    if (state.skills.length > 0) {
+      content += `## Project Skills & Workflows\n\n`;
+      for (const skill of state.skills) {
+        content += `- **${skill.name}**: ${skill.description}\n`;
+      }
+      content += '\n';
+    }
+
+    content += `## Zepher Context Integration\n`;
+    content += `This project uses Zepher context infrastructure.\n`;
+    content += `- Read .zepher/context/current.md for project state.\n`;
+    content += `- Read .zepher/tasks/active/ for active task details.\n`;
+    content += `- Read .zepher/decisions/ for architectural decisions (ADRs).\n`;
+
     return {
       files: [
         {
@@ -27,5 +52,53 @@ export const geminiAdapter: AgentAdapter = {
         }
       ]
     };
+  },
+  import(content: string, filePath: string): Partial<UnifiedZepherState> {
+    const rules = [];
+    const lines = content.split('\n');
+    let currentTitle = '';
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith('### ')) {
+        if (currentTitle && currentContent.length > 0) {
+          rules.push({
+            id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+            title: currentTitle,
+            content: currentContent.join('\n').trim(),
+            scope: 'local' as const,
+            priority: 50
+          });
+          currentContent = [];
+        }
+        currentTitle = line.replace(/^###\s+/, '').replace(/\s*\(Scope: [a-z]+\)$/, '').replace(/\s*\(Priority: \d+\)$/, '').trim();
+      } else if (line.startsWith('## ') || line.startsWith('# ')) {
+        if (currentTitle && currentContent.length > 0) {
+          rules.push({
+            id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+            title: currentTitle,
+            content: currentContent.join('\n').trim(),
+            scope: 'local' as const,
+            priority: 50
+          });
+          currentContent = [];
+          currentTitle = '';
+        }
+      } else if (currentTitle) {
+        currentContent.push(line);
+      }
+    }
+
+    if (currentTitle && currentContent.length > 0) {
+      rules.push({
+        id: currentTitle.toLowerCase().replace(/[^a-z0-9_-]+/g, '-'),
+        title: currentTitle,
+        content: currentContent.join('\n').trim(),
+        scope: 'local' as const,
+        priority: 50
+      });
+    }
+
+    return { rules };
   }
 };
