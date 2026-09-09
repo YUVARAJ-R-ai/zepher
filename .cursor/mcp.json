@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "zepher": {
+      "command": "zepher",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

@@ -7,7 +7,7 @@ Implement Authentication
 - 
 
 ## Status
-Active
+Completed
 
 ## Dependencies
 - 
