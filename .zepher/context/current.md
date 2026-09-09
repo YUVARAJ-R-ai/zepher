@@ -31,26 +31,26 @@ Always use TypeScript for new packages
 - **ADR-0001: Use Nextjs App Router** (Proposed)
 
 ## Recent Work & Handoffs
-**Latest session handoff (2026-09-08T17-08):**
+**Latest session handoff (2026-09-09T09-15):**
 
-# Agent Handoff - 2026-09-08T17-08
+# Agent Handoff - 2026-09-09T09-15
 
 ## Objective
-Configure zepher-cli package distribution for npm publishing
+Official public npm launch of zepher-cli v0.3.0
 
 ## Completed
-Configured package.json with zepher-cli name, bundle script using esbuild, files whitelist, MIT LICENSE, GitHub Actions publishing workflow, and verified npm pack (48.3 kB standalone bundle).
+Successfully published zepher-cli@0.3.0 to npm registry. Verified live npx execution and global install availability.
 
 ## Current State
 - **Branch**: `main`
 - **Recent Commits**:
-- `f481576 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/feature/issue-4-phase-1-and-2-context-tasks-adapters, refs/remotes/origin/HEAD, refs/heads/feature/issue-4-phase-1-and-2-context-tasks-adapters) feat: implement Phase 1 & 2 context richness, tasks suite, ADR suite, and adapter parity (closes #4)`
-- `7d3fe00 chore: record memory and session handoff for skill versioning`
-- `b590141 feat(skills): implement skill frontmatter semver, upstream update, and project pinning`
+- `757aa59 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/HEAD) chore: clean bin path in package.json`
+- `9f31674 chore: normalize repository url in package.json`
+- `fb5a794 feat: configure zepher-cli packaging, esbuild bundling, MIT license, and publishing workflow`
 
 ## Repository State
 - Branch: `main`
-- Uncommitted files: 7 modified/untracked file(s)
+- Uncommitted files: 1 modified/untracked file(s)
 
 ## Next Steps
 Focus on the highest priority active task listed above.

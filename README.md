@@ -6,7 +6,7 @@
 
 *Context windows are temporary. Project knowledge and standards are persistent.*
 
-[![npm version](https://img.shields.io/badge/version-0.3.0-blue.svg?style=for-the-badge)](https://www.npmjs.com/package/zepher)
+[![npm version](https://img.shields.io/npm/v/zepher-cli?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/zepher-cli)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![MCP Compatible](https://img.shields.io/badge/MCP-v2%20Compatible-green.svg?style=for-the-badge)](https://modelcontextprotocol.io/)
