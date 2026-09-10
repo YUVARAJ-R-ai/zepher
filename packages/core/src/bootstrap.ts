@@ -32,7 +32,7 @@ After meaningful work:
   // 2. Generate skills
   const skillsPath = path.join(zepherPath, SKILLS_DIR);
   const skillsToCreate = [
-    'zepher-core', 'discovery', 'context', 'planning', 'implementation', 
+    'zepher-core', 'zepher-data-vault', 'discovery', 'context', 'planning', 'implementation', 
     'debugging', 'testing', 'review', 'architecture', 'frontend', 'database', 'handoff'
   ];
   
@@ -42,7 +42,12 @@ After meaningful work:
     const skillDir = path.join(skillsPath, skill);
     if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
     
-    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `# ${skill.toUpperCase()} SKILL\n\n# Purpose\n\n# When To Use\n\n# Procedure\n\n# Expected Output\n`);
+    const templateSkill = path.join(projectRoot, 'templates', 'skills', skill, 'SKILL.md');
+    if (fs.existsSync(templateSkill)) {
+      fs.copyFileSync(templateSkill, path.join(skillDir, 'SKILL.md'));
+    } else {
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `# ${skill.toUpperCase()} SKILL\n\n# Purpose\n\n# When To Use\n\n# Procedure\n\n# Expected Output\n`);
+    }
   }
   
   // 3. Generate Agent Definitions

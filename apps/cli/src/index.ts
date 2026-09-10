@@ -801,8 +801,9 @@ assetCmd
   .command('track <path>')
   .description('Track a binary or heavy artifact in Zepher Asset Hub')
   .option('-t, --tag <tag>', 'Optional version or release tag')
+  .option('-s, --storage <storage>', 'Storage backend: local, r2, s3, ssh', 'local')
   .action((filePath, opts) => {
-    const res = trackAsset(process.cwd(), filePath, { tag: opts.tag });
+    const res = trackAsset(process.cwd(), filePath, { tag: opts.tag, storage: opts.storage as any });
     if (res.success) {
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
