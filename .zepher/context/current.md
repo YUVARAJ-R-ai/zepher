@@ -47,26 +47,26 @@ Always use TypeScript for new packages
 - **ADR-0001: Use Nextjs App Router** (Proposed)
 
 ## Recent Work & Handoffs
-**Latest session handoff (2026-09-09T10-06):**
+**Latest session handoff (2026-09-10T15-17):**
 
-# Agent Handoff - 2026-09-09T10-06
+# Agent Handoff - 2026-09-10T15-17
 
 ## Objective
-Public npm launch of zepher-cli, dogfooding self-management, and vendor sync
+Publish zepher-cli 0.3.1 with builtin zepher-data-vault skill
 
 ## Completed
-Published zepher-cli@0.3.0 to npm registry, configured standalone esbuild bundling, initialized complete Zepher self-management (.zepher/memory, ADR-0002, rules, tasks), and synced vendor configs (.cursor, .claude, .github).
+Created builtin zepher-data-vault skill, updated bootstrap logic, added -s/--storage option to asset track, bumped version to 0.3.1, pushed to GitHub main, and published zepher-cli@0.3.1 to npm registry.
 
 ## Current State
 - **Branch**: `main`
 - **Recent Commits**:
-- `b616142 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/HEAD) chore(context): initialize Zepher self-management, ADR-0002, and project memory`
-- `4f7ad7c docs: update npm package badge to zepher-cli`
-- `757aa59 chore: clean bin path in package.json`
+- `4caef98 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/HEAD) chore(release): bump version to 0.3.1 with builtin zepher-data-vault skill`
+- `6bd1522 feat(skills): add builtin zepher-data-vault skill for team secrets and blob storage distribution`
+- `8d5d2d4 docs: document standalone CLI commands and agent MCP directives in README`
 
 ## Repository State
 - Branch: `main`
-- Uncommitted files: 3 modified/untracked file(s)
+- Uncommitted files: 1 modified/untracked file(s)
 
 ## Next Steps
 Focus on the highest priority active task listed above.
