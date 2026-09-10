@@ -27,7 +27,7 @@ const program = new Command();
 program
   .name('zepher')
   .description('Persistent context, memory & universal agent environment manager')
-  .version('0.3.0');
+  .version('0.3.1');
 
 // Init
 program

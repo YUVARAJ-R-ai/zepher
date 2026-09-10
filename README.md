@@ -61,7 +61,7 @@ Modern AI coding agents (**Claude Code**, **Cursor**, **Windsurf**, **GitHub Cop
                        │   • Asset Hub (Seeds, binaries & fixtures)   │
                        └──────────────────────┬───────────────────────┘
                                               │
-                               [ Zepher Unified Engine v0.3.0 ]
+                               [ Zepher Unified Engine v0.3.1 ]
                                  ├── Watch Daemon (auto-sync)
                                  ├── Drift Verifier (CI/CD)
                                  ├── AI Schema Masker (anti-leak)
@@ -94,7 +94,7 @@ npx zepher-cli init
 Verify the installation:
 ```bash
 zepher --version
-# Output: 0.3.0
+# Output: 0.3.1
 ```
 
 ### 2. Initialize in 5 Seconds

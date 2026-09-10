@@ -12,7 +12,7 @@ import { listAllSkills } from '@zepher/skills';
 import { runSync } from '@zepher/adapters';
 import path from 'path';
 
-const server = new Server({ name: 'zepher', version: '0.3.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
 
 const TOOLS: Tool[] = [
   {
