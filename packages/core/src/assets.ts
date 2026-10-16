@@ -46,6 +46,12 @@ export function trackAsset(
   }
 
   const stat = fs.statSync(fullPath);
+  if (stat.isDirectory()) {
+    return {
+      success: false,
+      message: `"${normalizedRelPath}" is a directory. Zepher Asset Hub tracks individual binary files or archives. Please bundle the directory first (e.g. tar -czf ${normalizedRelPath}.tar.gz ${normalizedRelPath}/).`
+    };
+  }
   const data = fs.readFileSync(fullPath);
   const sha256 = crypto.createHash('sha256').update(data).digest('hex');
 
