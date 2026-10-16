@@ -127,4 +127,51 @@ ENABLE_ANALYTICS=true
     expect(restoredData[0]).toBe(0x7f);
     expect(restoredData[1]).toBe(0x45);
   });
+
+  it('normalizes Windows backslash paths to POSIX format for vault and assets', () => {
+    // 1. Create nested file for vault
+    const nestedVaultDir = path.join(tmpDir, 'nested', 'config');
+    fs.mkdirSync(nestedVaultDir, { recursive: true });
+    const nestedSecret = path.join(nestedVaultDir, 'secrets.json');
+    fs.writeFileSync(nestedSecret, '{"apiKey":"12345"}');
+
+    // 2. Track with Windows backslashes
+    const trackVaultRes = trackVaultFile(tmpDir, 'nested\\config\\secrets.json', 'secret');
+    expect(trackVaultRes.success).toBe(true);
+
+    // Verify .gitignore has POSIX forward slashes
+    const gitignoreContent = fs.readFileSync(path.join(tmpDir, '.gitignore'), 'utf-8');
+    expect(gitignoreContent).toContain('nested/config/secrets.json');
+    expect(gitignoreContent).not.toContain('nested\\config\\secrets.json');
+
+    // Seal and unseal
+    const sealRes = sealVault(tmpDir, 'test-pass');
+    expect(sealRes.sealedCount).toBe(1);
+
+    fs.unlinkSync(nestedSecret);
+    expect(fs.existsSync(nestedSecret)).toBe(false);
+
+    const unsealRes = unsealVault(tmpDir, 'test-pass');
+    expect(unsealRes.unsealedCount).toBe(1);
+    expect(fs.existsSync(nestedSecret)).toBe(true);
+
+    // 3. Asset tracking with Windows backslashes
+    const nestedAssetDir = path.join(tmpDir, 'data', 'models');
+    fs.mkdirSync(nestedAssetDir, { recursive: true });
+    const modelFile = path.join(nestedAssetDir, 'weights.bin');
+    fs.writeFileSync(modelFile, 'mock-model-weights');
+
+    const trackAssetRes = trackAsset(tmpDir, 'data\\models\\weights.bin');
+    expect(trackAssetRes.success).toBe(true);
+    expect(trackAssetRes.pointer?.path).toBe('data/models/weights.bin');
+
+    const stashRes = stashLocalAsset(tmpDir, 'data\\models\\weights.bin');
+    expect(stashRes.success).toBe(true);
+
+    fs.unlinkSync(modelFile);
+    const restoreRes = restoreLocalAsset(tmpDir, 'data\\models\\weights.bin');
+    expect(restoreRes.success).toBe(true);
+    expect(fs.existsSync(modelFile)).toBe(true);
+  });
 });
+

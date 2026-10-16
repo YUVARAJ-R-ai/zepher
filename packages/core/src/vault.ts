@@ -77,7 +77,7 @@ export function ensureGitIgnored(projectRoot: string, relativePath: string): boo
     content = fs.readFileSync(gitignorePath, 'utf-8');
   }
 
-  const normalized = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+  const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
   const lines = content.split('\n').map(l => l.trim());
 
   if (lines.includes(normalized) || lines.includes(`/${normalized}`)) {
@@ -99,25 +99,26 @@ export function trackVaultFile(
   type: VaultFileType = 'secret',
   autoSeal: boolean = true
 ): { success: boolean; message: string } {
-  const fullPath = path.join(projectRoot, relPath);
+  const normalizedRelPath = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const fullPath = path.join(projectRoot, normalizedRelPath);
   if (!fs.existsSync(fullPath)) {
-    return { success: false, message: `File "${relPath}" does not exist in project root.` };
+    return { success: false, message: `File "${normalizedRelPath}" does not exist in project root.` };
   }
 
   const config = loadVaultConfig(projectRoot);
-  const existingIdx = config.items.findIndex(i => i.path === relPath);
+  const existingIdx = config.items.findIndex(i => i.path === normalizedRelPath);
 
   if (existingIdx !== -1) {
     config.items[existingIdx].type = type;
     config.items[existingIdx].autoSeal = autoSeal;
   } else {
-    config.items.push({ path: relPath, type, autoSeal });
+    config.items.push({ path: normalizedRelPath, type, autoSeal });
   }
 
   saveVaultConfig(projectRoot, config);
-  ensureGitIgnored(projectRoot, relPath);
+  ensureGitIgnored(projectRoot, normalizedRelPath);
 
-  return { success: true, message: `Tracked "${relPath}" as ${type} in Zepher Vault and added to .gitignore.` };
+  return { success: true, message: `Tracked "${normalizedRelPath}" as ${type} in Zepher Vault and added to .gitignore.` };
 }
 
 // --- Cryptographic Envelope (AES-256-GCM + PBKDF2) ---
