@@ -105,6 +105,14 @@ export function trackVaultFile(
     return { success: false, message: `File "${normalizedRelPath}" does not exist in project root.` };
   }
 
+  const stat = fs.statSync(fullPath);
+  if (stat.isDirectory()) {
+    return {
+      success: false,
+      message: `"${normalizedRelPath}" is a directory. Zepher Vault tracks individual files. Either track files individually or bundle the directory first (e.g. tar -czf ${normalizedRelPath}.tar.gz ${normalizedRelPath}/ && zepher vault track ${normalizedRelPath}.tar.gz).`
+    };
+  }
+
   const config = loadVaultConfig(projectRoot);
   const existingIdx = config.items.findIndex(i => i.path === normalizedRelPath);
 

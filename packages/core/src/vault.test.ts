@@ -173,5 +173,21 @@ ENABLE_ANALYTICS=true
     expect(restoreRes.success).toBe(true);
     expect(fs.existsSync(modelFile)).toBe(true);
   });
+
+  it('safely handles directories in trackVaultFile and trackAsset with helpful error messages', () => {
+    const testDir = path.join(tmpDir, 'sample_dir');
+    fs.mkdirSync(testDir, { recursive: true });
+
+    const vaultDirRes = trackVaultFile(tmpDir, 'sample_dir');
+    expect(vaultDirRes.success).toBe(false);
+    expect(vaultDirRes.message).toContain('is a directory');
+    expect(vaultDirRes.message).toContain('tar -czf');
+
+    const assetDirRes = trackAsset(tmpDir, 'sample_dir');
+    expect(assetDirRes.success).toBe(false);
+    expect(assetDirRes.message).toContain('is a directory');
+    expect(assetDirRes.message).toContain('tar -czf');
+  });
 });
+
 
