@@ -39,9 +39,10 @@ export function trackAsset(
   relPath: string,
   options: { tag?: string; storage?: 'local' | 'r2' | 's3' | 'ssh' } = {}
 ): { success: boolean; message: string; pointer?: AssetPointer } {
-  const fullPath = path.join(projectRoot, relPath);
+  const normalizedRelPath = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const fullPath = path.join(projectRoot, normalizedRelPath);
   if (!fs.existsSync(fullPath)) {
-    return { success: false, message: `Asset file "${relPath}" does not exist.` };
+    return { success: false, message: `Asset file "${normalizedRelPath}" does not exist.` };
   }
 
   const stat = fs.statSync(fullPath);
@@ -51,7 +52,7 @@ export function trackAsset(
   const lockfile = loadAssetsLockfile(projectRoot);
 
   const pointer: AssetPointer = {
-    path: relPath,
+    path: normalizedRelPath,
     sha256,
     size: stat.size,
     storage: options.storage || 'local',
@@ -60,13 +61,13 @@ export function trackAsset(
     updatedAt: new Date().toISOString()
   };
 
-  lockfile.assets[relPath] = pointer;
+  lockfile.assets[normalizedRelPath] = pointer;
   saveAssetsLockfile(projectRoot, lockfile);
-  ensureGitIgnored(projectRoot, relPath);
+  ensureGitIgnored(projectRoot, normalizedRelPath);
 
   return {
     success: true,
-    message: `Tracked asset "${relPath}" (${(stat.size / 1024).toFixed(1)} KB) in Zepher Asset Hub.`,
+    message: `Tracked asset "${normalizedRelPath}" (${(stat.size / 1024).toFixed(1)} KB) in Zepher Asset Hub.`,
     pointer
   };
 }
@@ -75,15 +76,16 @@ export function stashLocalAsset(
   projectRoot: string,
   relPath: string
 ): { success: boolean; message: string } {
-  const fullPath = path.join(projectRoot, relPath);
+  const normalizedRelPath = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const fullPath = path.join(projectRoot, normalizedRelPath);
   if (!fs.existsSync(fullPath)) {
-    return { success: false, message: `Source file "${relPath}" not found.` };
+    return { success: false, message: `Source file "${normalizedRelPath}" not found.` };
   }
 
   const lockfile = loadAssetsLockfile(projectRoot);
-  const pointer = lockfile.assets[relPath];
+  const pointer = lockfile.assets[normalizedRelPath];
   if (!pointer) {
-    return { success: false, message: `Asset "${relPath}" is not registered. Run "zepher asset track ${relPath}" first.` };
+    return { success: false, message: `Asset "${normalizedRelPath}" is not registered. Run "zepher asset track ${normalizedRelPath}" first.` };
   }
 
   const blobDir = path.join(projectRoot, ZEPHER_DIR, 'assets', 'blobs');
@@ -92,17 +94,18 @@ export function stashLocalAsset(
   const destBlob = path.join(projectRoot, pointer.location);
   fs.copyFileSync(fullPath, destBlob);
 
-  return { success: true, message: `Stashed asset "${relPath}" to blob store (${pointer.location}).` };
+  return { success: true, message: `Stashed asset "${normalizedRelPath}" to blob store (${pointer.location}).` };
 }
 
 export function restoreLocalAsset(
   projectRoot: string,
   relPath: string
 ): { success: boolean; message: string } {
+  const normalizedRelPath = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const lockfile = loadAssetsLockfile(projectRoot);
-  const pointer = lockfile.assets[relPath];
+  const pointer = lockfile.assets[normalizedRelPath];
   if (!pointer) {
-    return { success: false, message: `Asset "${relPath}" not found in assets.lock.yaml.` };
+    return { success: false, message: `Asset "${normalizedRelPath}" not found in assets.lock.yaml.` };
   }
 
   const blobPath = path.join(projectRoot, pointer.location);
@@ -114,13 +117,13 @@ export function restoreLocalAsset(
   const actualSha = crypto.createHash('sha256').update(blobData).digest('hex');
 
   if (actualSha !== pointer.sha256) {
-    return { success: false, message: `Checksum verification failed for "${relPath}".` };
+    return { success: false, message: `Checksum verification failed for "${normalizedRelPath}".` };
   }
 
-  const destPath = path.join(projectRoot, relPath);
+  const destPath = path.join(projectRoot, normalizedRelPath);
   const destDir = path.dirname(destPath);
   if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
   fs.writeFileSync(destPath, blobData);
-  return { success: true, message: `Restored asset "${relPath}" successfully (verified SHA-256).` };
+  return { success: true, message: `Restored asset "${normalizedRelPath}" successfully (verified SHA-256).` };
 }
