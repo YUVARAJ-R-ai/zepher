@@ -38,4 +38,11 @@ describe('Memory Storage & Search', () => {
     const res2 = searchMemory(tmpDir, '[char]+?');
     expect(res2.length).toBeGreaterThan(0);
   });
+
+  it('rejects a type that could escape the memory directory', () => {
+    expect(saveMemory(tmpDir, '../../pwned', 'x')).toBe(false);
+    expect(saveMemory(tmpDir, 'a/b', 'x')).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, ZEPHER_DIR))).toBe(false);
+    expect(saveMemory(tmpDir, 'environment', 'ok')).toBe(true);
+  });
 });
