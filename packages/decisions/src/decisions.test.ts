@@ -47,6 +47,11 @@ describe('Decisions / ADR Suite', () => {
     expect(adr2BySlug?.fileName).toBe('ADR-0002-use-redis-for-caching.md');
   });
 
+  it('finds a decision by its spaced title', () => {
+    createDecision(tmpDir, 'Use Redis for caching');
+    expect(getDecision(tmpDir, 'Use Redis for caching')?.fileName).toBe('ADR-0001-use-redis-for-caching.md');
+  });
+
   it('returns null when decision does not exist', () => {
     const result = getDecision(tmpDir, 'ADR-9999');
     expect(result).toBeNull();
