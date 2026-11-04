@@ -12,7 +12,7 @@ export const windsurfAdapter: AgentAdapter = {
       fs.existsSync(path.join(projectRoot, '.codeium'));
   },
   compile(state: UnifiedZepherState, projectRoot: string): AdapterOutput {
-    let content = `# Windsurf AI Rules for ${state.project.name}\n\n`;
+    let content = `# Windsurf AI Rules\n\n`;
 
     if (state.rules.length > 0) {
       content += `## Project Instructions\n\n`;

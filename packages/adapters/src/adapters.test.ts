@@ -145,4 +145,11 @@ describe('Vendor Adapters Compilation', () => {
       expect(imported.rules?.[0].title).toBe('No Any Type');
     }
   });
+
+  it('produces identical output regardless of project name', async () => {
+    const renamed: UnifiedZepherState = { ...dummyState, project: { name: 'other-dir', root: '/other-dir' } };
+    for (const adapter of [cursorAdapter, windsurfAdapter]) {
+      expect(await adapter.compile(renamed, '/other-dir')).toEqual(await adapter.compile(dummyState, '/test-app'));
+    }
+  });
 });
