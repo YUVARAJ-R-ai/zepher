@@ -18,7 +18,8 @@
     "@zepher/context": "workspace:*",
     "@zepher/integrations": "workspace:*",
     "@zepher/skills": "workspace:*",
-    "@zepher/adapters": "workspace:*"
+    "@zepher/adapters": "workspace:*",
+    "@zepher/workflows": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

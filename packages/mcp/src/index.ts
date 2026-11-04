@@ -10,6 +10,7 @@ import { getStatus, resolveUnifiedState, addRule, getVaultItemStatuses, getAsset
 import { getAllIntegrations } from '@zepher/integrations';
 import { listAllSkills } from '@zepher/skills';
 import { runSync } from '@zepher/adapters';
+import { listWorkflows, getWorkflowProgress } from '@zepher/workflows';
 import path from 'path';
 
 export const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
@@ -129,6 +130,11 @@ const TOOLS: Tool[] = [
     name: 'zepher_asset_list',
     description: 'List assets in assets.lock.yaml with storage backend and whether the local blob exists',
     inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
+  },
+  {
+    name: 'zepher_get_workflow',
+    description: 'Get a built-in workflow with its phases and progress (completed phases and next phase); without a name, list available workflows. Never runs validation commands',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' }, name: { type: 'string' } }, required: ['projectRoot'] }
   }
 ];
 
@@ -203,6 +209,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: 'text', text: JSON.stringify(getVaultItemStatuses(projectRoot), null, 2) }] };
       case 'zepher_asset_list':
         return { content: [{ type: 'text', text: JSON.stringify(getAssetStatuses(projectRoot), null, 2) }] };
+      case 'zepher_get_workflow': {
+        if (!args.name) return { content: [{ type: 'text', text: JSON.stringify(listWorkflows(), null, 2) }] };
+        const progress = getWorkflowProgress(projectRoot, String(args.name));
+        if (!progress) throw new Error(`Unknown workflow: ${args.name}`);
+        return { content: [{ type: 'text', text: JSON.stringify(progress, null, 2) }] };
+      }
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

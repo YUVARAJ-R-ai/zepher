@@ -123,4 +123,33 @@ describe('MCP v2 Tools Support', () => {
       expect(byPath['b.bin']).toMatchObject({ storage: 'local', blobPresent: false });
     });
   });
+
+  describe('zepher_get_workflow', () => {
+    let client: Client;
+
+    beforeEach(async () => {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      client = new Client({ name: 'test', version: '0.0.0' }, { capabilities: {} });
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    });
+
+    afterEach(async () => {
+      await client.close();
+    });
+
+    const call = async (args: Record<string, unknown>): Promise<string> => {
+      const res = await client.callTool({ name: 'zepher_get_workflow', arguments: { projectRoot: tmpDir, ...args } });
+      return (res.content as { text: string }[])[0].text;
+    };
+
+    it('lists workflows without a name', async () => {
+      expect(JSON.parse(await call({})).map((w: any) => w.name)).toEqual(['feature-development', 'bug-fix', 'security-audit']);
+    });
+
+    it('returns progress for a name and an error for an unknown one', async () => {
+      const progress = JSON.parse(await call({ name: 'bug-fix' }));
+      expect(progress).toMatchObject({ completed: [], next: 'reproduce' });
+      expect(await call({ name: 'nope' })).toBe('Error: Unknown workflow: nope');
+    });
+  });
 });

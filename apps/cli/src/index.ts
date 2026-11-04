@@ -20,6 +20,7 @@ import {
   installSkillFromSource, listAllSkills, removeSkill, harvestAgentSkills, linkAgentSkills,
   updateSkill, updateAllSkills, pinSkill, unpinSkill 
 } from '@zepher/skills';
+import { listWorkflows, getWorkflowProgress, completePhase, resetWorkflow } from '@zepher/workflows';
 import { runIntegrationTui } from './tui.js';
 
 const program = new Command();
@@ -98,6 +99,49 @@ program
       nextActions: options.next
     });
     console.log(chalk.green(`✓ Session handoff created: .zepher/handoffs/${fileName}`));
+  });
+
+program
+  .command('workflow [name]')
+  .description('Show or advance a built-in workflow (feature-development, bug-fix, security-audit)')
+  .option('--json', 'Print progress as JSON')
+  .option('--done <phase>', 'Mark the next phase complete (runs its validation command)')
+  .option('--reset', 'Clear recorded progress')
+  .action((name: string | undefined, options) => {
+    if (!name) {
+      for (const w of listWorkflows()) console.log(`${chalk.cyan(w.name)}  ${w.description}`);
+      return;
+    }
+    const root = process.cwd();
+    if (!getWorkflowProgress(root, name)) {
+      console.error(chalk.red(`Unknown workflow: ${name}`));
+      process.exitCode = 1;
+      return;
+    }
+    if (options.reset) {
+      resetWorkflow(root, name);
+      console.log(chalk.green(`✓ Reset ${name}`));
+      return;
+    }
+    if (options.done) {
+      const res = completePhase(root, name, options.done);
+      (res.success ? console.log : console.error)(res.success ? chalk.green(`✓ ${res.message}`) : chalk.red(res.message));
+      if (!res.success) process.exitCode = 1;
+      return;
+    }
+    const progress = getWorkflowProgress(root, name)!;
+    if (options.json) {
+      console.log(JSON.stringify(progress, null, 2));
+      return;
+    }
+    console.log(chalk.bold(`${progress.workflow.name}: ${progress.workflow.description}`));
+    for (const p of progress.workflow.phases) {
+      const done = progress.completed.includes(p.id);
+      const line = `${done ? '[x]' : '[ ]'} ${p.id} - ${p.title}`;
+      console.log(p.id === progress.next ? chalk.bold.yellow(`${line}  <- next`) : line);
+      for (const step of p.steps) console.log(`      - ${step}`);
+      if (p.validate) console.log(`      validate: ${p.validate}`);
+    }
   });
 
 // Task command suite
