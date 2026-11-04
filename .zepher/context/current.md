@@ -1,4 +1,4 @@
-# Current Context for sunstar
+# Current Context for zepher
 
 ## Project Overview
 # Project Facts
@@ -8,8 +8,8 @@ Language: TypeScript (ESM)
 Runtime: Node.js (>= 18.0.0)
 Architecture: Modular Monorepo (pnpm workspaces)
 Bundler: esbuild (standalone CLI distribution)
-Testing: Vitest (11 test suites, 39 tests)
-Package Distribution: npm (zepher-cli@0.3.0)
+Testing: Vitest (15 test suites, 93 tests)
+Package Distribution: npm (zepher-cli@0.3.1)
 Supported Agent Targets: Cursor (.cursorrules, .cursor/rules/*.mdc, .cursor/mcp.json), Claude Code (CLAUDE.md, .claude.json), Gemini/Antigravity (.gemini/rules/), Windsurf (.windsurfrules), GitHub Copilot (.github/copilot-instructions.md)
 
 ## Architecture Notes
@@ -47,26 +47,26 @@ Always use TypeScript for new packages
 - **ADR-0001: Use Nextjs App Router** (Proposed)
 
 ## Recent Work & Handoffs
-**Latest session handoff (2026-09-10T15-17):**
+**Latest session handoff (2026-11-04T13-46):**
 
-# Agent Handoff - 2026-09-10T15-17
+# Agent Handoff - 2026-11-04T13-46
 
 ## Objective
-Publish zepher-cli 0.3.1 with builtin zepher-data-vault skill
+Task 6: end-to-end test, verify #1, fix what breaks
 
 ## Completed
-Created builtin zepher-data-vault skill, updated bootstrap logic, added -s/--storage option to asset track, bumped version to 0.3.1, pushed to GitHub main, and published zepher-cli@0.3.1 to npm registry.
+Ran every CLI command and all 17 MCP tools over stdio from the packed tarball; fixed 5 bugs
 
 ## Current State
-- **Branch**: `main`
+- **Branch**: `YUVARAJ-R-ai/feat-complete-board-tasks`
 - **Recent Commits**:
-- `4caef98 (HEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/HEAD) chore(release): bump version to 0.3.1 with builtin zepher-data-vault skill`
-- `6bd1522 feat(skills): add builtin zepher-data-vault skill for team secrets and blob storage distribution`
-- `8d5d2d4 docs: document standalone CLI commands and agent MCP directives in README`
+- `3051a0f (HEAD -> refs/heads/YUVARAJ-R-ai/feat-complete-board-tasks) fix: validate required MCP tool arguments and reject unknown tools`
+- `bd0e316 fix: exit non-zero when asset track or stash fails`
+- `45dfcf7 fix: exit non-zero when vault track, seal or unseal fails`
 
 ## Repository State
 - Branch: `YUVARAJ-R-ai/feat-complete-board-tasks`
-- Uncommitted files: Working tree clean
+- Uncommitted files: 5 modified/untracked file(s)
 
 ## Next Steps
 Consult active backlog or check project goals.
