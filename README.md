@@ -385,7 +385,7 @@ All standalone developer commands are invoked via the `zepher` CLI executable. C
 Zepher equips AI coding agents (**Claude Code**, **Cursor**, **Gemini / Antigravity**, **Windsurf**) with programmatic access to project state, memory, tasks, rules, and synchronization through standard protocols and runtime conventions.
 
 ### 1. Model Context Protocol (MCP v2) Tool Suite
-When running via `zepher mcp`, Zepher exposes **14 structured tools** adhering to the MCP specification:
+When running via `zepher mcp`, Zepher exposes **16 structured tools** adhering to the MCP specification:
 
 | Tool Name | Arguments & Types | Return Output | Agent Purpose & Description |
 |---|---|---|---|
@@ -403,6 +403,8 @@ When running via `zepher mcp`, Zepher exposes **14 structured tools** adhering t
 | `zepher_list_skills` | `projectRoot` (string, required) | JSON object: `{ global: Skill[], local: Skill[] }` | Enumerate all available skills, workflows, and procedures across global and project installations. |
 | `zepher_sync` | `projectRoot` (string, required)<br>`dryRun` (boolean, optional)<br>`force` (boolean, optional)<br>`adapter` (string, optional) | JSON object with compilation summary and touched file lists | Programmatically re-compile vendor agent configurations after adding rules, skills, or constraints. |
 | `zepher_generate_handoff` | `projectRoot` (string, required) | Text string: Handoff file path (e.g. `.zepher/handoffs/2026-09-10T12-00.md`) | Synthesize an actionable handoff snapshot capturing current git branch, uncommitted diffs, and remaining tasks. |
+| `zepher_vault_status` | `projectRoot` (string, required) | JSON array: `[{ path, type, state, fileExists, sealedAt? }]` | Report sealed/unsealed/dirty/sync state of tracked vault items. Never includes secret values. |
+| `zepher_asset_list` | `projectRoot` (string, required) | JSON array: `[{ path, sha256, size, storage, location, blobPresent }]` | List assets in `assets.lock.yaml` with storage backend and whether the local blob exists. |
 
 ### 2. Autonomous Agent Lifecycle Protocol (`AGENTS.md`)
 Zepher establishes a standard operational protocol for autonomous agents operating in the workspace:

@@ -6,13 +6,13 @@ import { generateContext } from '@zepher/context';
 import { createTask, listTasks, completeTask, blockTask } from '@zepher/tasks';
 import { createDecision, listDecisions } from '@zepher/decisions';
 import { createHandoff } from '@zepher/sessions';
-import { getStatus, resolveUnifiedState, addRule } from '@zepher/core';
+import { getStatus, resolveUnifiedState, addRule, getVaultItemStatuses, getAssetStatuses } from '@zepher/core';
 import { getAllIntegrations } from '@zepher/integrations';
 import { listAllSkills } from '@zepher/skills';
 import { runSync } from '@zepher/adapters';
 import path from 'path';
 
-const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
+export const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
 
 const TOOLS: Tool[] = [
   {
@@ -119,6 +119,16 @@ const TOOLS: Tool[] = [
       },
       required: ['projectRoot']
     }
+  },
+  {
+    name: 'zepher_vault_status',
+    description: 'Show status (sealed/unsealed/dirty/sync) of tracked vault items. Never returns secret values',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
+  },
+  {
+    name: 'zepher_asset_list',
+    description: 'List assets in assets.lock.yaml with storage backend and whether the local blob exists',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
   }
 ];
 
@@ -189,6 +199,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
         return { content: [{ type: 'text', text: JSON.stringify(syncRes, null, 2) }] };
       }
+      case 'zepher_vault_status':
+        return { content: [{ type: 'text', text: JSON.stringify(getVaultItemStatuses(projectRoot), null, 2) }] };
+      case 'zepher_asset_list':
+        return { content: [{ type: 'text', text: JSON.stringify(getAssetStatuses(projectRoot), null, 2) }] };
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
