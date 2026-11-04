@@ -782,6 +782,7 @@ vaultCmd
       console.log(`Run ${chalk.cyan('zepher vault seal')} to encrypt.`);
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 
@@ -796,6 +797,7 @@ vaultCmd
     }
     if (res.errors.length > 0) {
       res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+      process.exitCode = 1;
     }
   });
 
@@ -810,6 +812,7 @@ vaultCmd
     }
     if (res.errors.length > 0) {
       res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+      process.exitCode = 1;
     }
   });
 
