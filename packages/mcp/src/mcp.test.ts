@@ -152,4 +152,26 @@ describe('MCP v2 Tools Support', () => {
       expect(await call({ name: 'nope' })).toBe('Error: Unknown workflow: nope');
     });
   });
+  describe('argument validation', () => {
+    let client: Client;
+
+    beforeEach(async () => {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      client = new Client({ name: 'test', version: '0.0.0' }, { capabilities: {} });
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    });
+
+    afterEach(async () => {
+      await client.close();
+    });
+
+    it('rejects a call missing a required argument instead of writing "undefined"', async () => {
+      await expect(client.callTool({ name: 'zepher_add_rule', arguments: { projectRoot: tmpDir } })).rejects.toThrow('content is required');
+      expect(fs.existsSync(path.join(tmpDir, '.zepher'))).toBe(false);
+    });
+
+    it('rejects an unknown tool by name', async () => {
+      await expect(client.callTool({ name: 'zepher_nope', arguments: { projectRoot: tmpDir } })).rejects.toThrow('Unknown tool: zepher_nope');
+    });
+  });
 });

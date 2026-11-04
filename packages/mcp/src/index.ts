@@ -142,7 +142,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }))
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const tool = TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`Unknown tool: ${name}`);
   if (!args || typeof args.projectRoot !== 'string') throw new Error('projectRoot is required');
+  // String(undefined) would otherwise be written to disk as "undefined".
+  for (const key of tool.inputSchema.required as string[]) {
+    if (typeof args[key] !== 'string') throw new Error(`${key} is required`);
+  }
   const { projectRoot } = args;
 
   try {
