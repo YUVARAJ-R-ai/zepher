@@ -224,4 +224,14 @@ describe('getVaultItemStatuses', () => {
     expect(byPath['dir']).toMatchObject({ state: 'unsealed', fileExists: false });
     expect(byPath['seeds/*.sql'].state).toBe('unsealed');
   });
+
+  it('reports unsealed when plaintext and the envelope are both gone', () => {
+    fs.writeFileSync(path.join(root, 'gone.env'), 'x');
+    trackVaultFile(root, 'gone.env');
+    sealVault(root, 'pw');
+    fs.rmSync(path.join(root, 'gone.env'));
+    expect(getVaultItemStatuses(root)[0].state).toBe('sealed');
+    fs.rmSync(path.join(root, '.zepher', 'vault'), { recursive: true, force: true });
+    expect(getVaultItemStatuses(root)[0].state).toBe('unsealed');
+  });
 });

@@ -398,7 +398,8 @@ export function getVaultItemStatuses(projectRoot: string): VaultItemStatus[] {
     if (!entry) {
       state = 'unsealed';
     } else if (!fileExists) {
-      state = 'sealed';
+      // Plaintext gone: only sealed if the encrypted envelope still exists.
+      state = fs.existsSync(path.join(projectRoot, entry.envelopeFile)) ? 'sealed' : 'unsealed';
     } else {
       const sha = crypto.createHash('sha256').update(fs.readFileSync(fullPath)).digest('hex');
       state = sha === entry.sha256 ? 'sync' : 'dirty';
