@@ -72,4 +72,9 @@ describe('workflows', () => {
     resetWorkflow(tmp, '../../evil');
     expect(fs.existsSync(path.join(tmp, '.zepher'))).toBe(false);
   });
+
+  it('git-ignores the local state folder when writing state', () => {
+    completePhase(tmp, 'bug-fix', 'reproduce', ok);
+    expect(fs.readFileSync(path.join(tmp, '.gitignore'), 'utf-8')).toContain('.zepher/local/');
+  });
 });

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { ZEPHER_DIR, LOCAL_DIR } from '@zepher/core';
+import { ZEPHER_DIR, LOCAL_DIR, ensureGitIgnored } from '@zepher/core';
 
 export interface WorkflowPhase { id: string; title: string; steps: string[]; validate?: string; }
 export interface Workflow { name: string; description: string; phases: WorkflowPhase[]; }
@@ -94,6 +94,7 @@ export function completePhase(projectRoot: string, name: string, phaseId: string
   }
   const file = statePath(projectRoot, name);
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  ensureGitIgnored(projectRoot, `${ZEPHER_DIR}/${LOCAL_DIR}/`);
   fs.writeFileSync(file, JSON.stringify({ completed: [...progress.completed, phaseId] }, null, 2));
   const following = progress.workflow.phases[progress.workflow.phases.indexOf(phase) + 1];
   return { success: true, message: following ? `Completed '${phaseId}'. Next: '${following.id}'` : `Completed '${phaseId}'. Workflow ${name} is complete` };
