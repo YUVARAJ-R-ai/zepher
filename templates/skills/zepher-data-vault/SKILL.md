@@ -179,6 +179,8 @@ Cloudflare R2 uses the S3-compatible API:
    zepher asset pull data-bundle.tar.gz
    ```
 
+`zepher asset pull` can also download a missing blob itself for `s3`/`r2` assets: set `ZEPHER_S3_BUCKET` (or `AWS_S3_BUCKET` for s3, `R2_BUCKET` for r2) with `aws`/`rclone` installed, and blobs are fetched from `blobs/<blobName>` in that bucket.
+
 ### Option C: Google Drive via `rclone`
 `rclone` provides direct command-line synchronization with Google Drive:
 1. **Configure rclone:**

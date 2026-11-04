@@ -362,7 +362,7 @@ All standalone developer commands are invoked via the `zepher` CLI executable. C
 |---|---|---|
 | `zepher asset track <path>` | `[-t, --tag <tag>]` | Track heavy binary, dataset, database seed, or test fixture with optional release tag. |
 | `zepher asset stash <path>` | — | Compute SHA-256 hash and stash tracked file to local or remote blob store. |
-| `zepher asset pull <path>` | — | Restore tracked binary from blob store with cryptographic checksum verification. |
+| `zepher asset pull <path>` | — | Restore tracked binary from blob store with cryptographic checksum verification; missing `s3`/`r2` blobs are downloaded via `aws`/`rclone` when `ZEPHER_S3_BUCKET` (or `AWS_S3_BUCKET` / `R2_BUCKET`) is set. |
 
 ### 🔌 Integrations & Interactive TUI (`zepher integrate`)
 | Command | Options / Arguments | Description |
