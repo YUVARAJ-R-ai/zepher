@@ -1,4 +1,4 @@
-# Current Context for zepher
+# Current Context for sunstar
 
 ## Project Overview
 # Project Facts
@@ -40,7 +40,7 @@ Skills support YAML frontmatter versioning, lockfile tracking, zepher skill upda
 Always use TypeScript for new packages
 
 ## Active Tasks
-- **[automated-pr-drift-verificatio]** Automated PR Drift Verification
+(No active tasks. Create one with `zepher task create <name>`)
 
 ## Recent Architecture Decisions
 - **ADR-0002: Bundle CLI with esbuild for standalone npm distribution** (Accepted)
@@ -65,8 +65,8 @@ Created builtin zepher-data-vault skill, updated bootstrap logic, added -s/--sto
 - `8d5d2d4 docs: document standalone CLI commands and agent MCP directives in README`
 
 ## Repository State
-- Branch: `main`
-- Uncommitted files: 1 modified/untracked file(s)
+- Branch: `YUVARAJ-R-ai/feat-complete-board-tasks`
+- Uncommitted files: Working tree clean
 
 ## Next Steps
-Focus on the highest priority active task listed above.
+Consult active backlog or check project goals.
