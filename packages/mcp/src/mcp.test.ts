@@ -174,4 +174,42 @@ describe('MCP v2 Tools Support', () => {
       await expect(client.callTool({ name: 'zepher_nope', arguments: { projectRoot: tmpDir } })).rejects.toThrow('Unknown tool: zepher_nope');
     });
   });
+
+  describe('issue #1 tools end to end', () => {
+    let client: Client;
+
+    beforeEach(async () => {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      client = new Client({ name: 'test', version: '0.0.0' }, { capabilities: {} });
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    });
+
+    afterEach(async () => {
+      await client.close();
+    });
+
+    const call = async (name: string, args: Record<string, unknown> = {}): Promise<string> => {
+      const res = await client.callTool({ name, arguments: { projectRoot: tmpDir, ...args } });
+      return (res.content as { text: string }[])[0].text;
+    };
+
+    it('adds a rule, lists rules and skills, and previews sync in a temp project', async () => {
+      await call('zepher_add_rule', { content: 'Always write tests', title: 'Tests First' });
+      const rules = JSON.parse(await call('zepher_get_rules'));
+      expect(rules.map((r: { title: string }) => r.title)).toContain('Tests First');
+
+      const skills = JSON.parse(await call('zepher_list_skills'));
+      expect(Array.isArray(skills.local)).toBe(true);
+
+      const sync = JSON.parse(await call('zepher_sync', { dryRun: true }));
+      expect(sync.success).toBe(true);
+      expect(sync.filesWritten.length).toBeGreaterThan(0);
+      expect(fs.existsSync(path.join(tmpDir, 'CLAUDE.md'))).toBe(false);
+    });
+
+    it('flags failures with isError', async () => {
+      const res = await client.callTool({ name: 'zepher_get_workflow', arguments: { projectRoot: tmpDir, name: 'nope' } });
+      expect(res.isError).toBe(true);
+    });
+  });
 });
