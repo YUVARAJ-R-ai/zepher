@@ -66,4 +66,23 @@ describe('generateContext vault & asset section', () => {
     expect(out).toContain('- Tracked Secrets: 0\n');
     expect(out).toContain('- Tracked Assets: 0\n');
   });
+
+  it('does not crash on a vault item without path or an asset without location', () => {
+    write('.zepher/vault.config.yaml', 'version: "1.0"\nmembers: []\nitems:\n  - type: secret\n');
+    write('.zepher/assets.lock.yaml', 'version: "1.0"\nassets:\n  a.bin:\n    sha256: abc\n');
+    expect(generateContext(root)).toContain('- Vault/asset status unavailable:');
+  });
+
+  it('does not crash on an unreadable tracked file', () => {
+    if (process.getuid?.() === 0) return; // root ignores file modes
+    write('.env', 'A=1');
+    trackVaultFile(root, '.env');
+    sealVault(root, 'pw');
+    fs.chmodSync(path.join(root, '.env'), 0o000);
+    try {
+      expect(generateContext(root)).toContain('- Vault/asset status unavailable:');
+    } finally {
+      fs.chmodSync(path.join(root, '.env'), 0o644);
+    }
+  });
 });

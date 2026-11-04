@@ -97,20 +97,24 @@ export function generateContext(projectRoot: string): string {
 
   // 6. Vault & asset status (counts and names only, never contents or hashes)
   const vaultLines: string[] = [];
-  if (fs.existsSync(getVaultConfigPath(projectRoot))) {
-    const items = getVaultItemStatuses(projectRoot);
-    const groups = (['dirty', 'unsealed'] as const)
-      .map(state => ({ state, paths: items.filter(i => i.state === state).map(i => i.path) }))
-      .filter(g => g.paths.length > 0)
-      .map(g => `${g.paths.length} ${g.state}: ${g.paths.join(', ')}`);
-    const detail = items.length === 0 ? '' : ` (${groups.length === 0 ? 'All sealed & clean' : groups.join(', ')})`;
-    vaultLines.push(`- Tracked Secrets: ${items.length}${detail}`);
-  }
-  if (fs.existsSync(getAssetsLockfilePath(projectRoot))) {
-    const assets = getAssetStatuses(projectRoot);
-    const detail = assets.length === 0 ? '' : ` (${assets.map(a =>
-      `${a.path}${a.tag ? ` [${a.tag}]` : ''} - ${a.blobPresent ? 'blob present' : 'blob missing'}`).join('; ')})`;
-    vaultLines.push(`- Tracked Assets: ${assets.length}${detail}`);
+  try {
+    if (fs.existsSync(getVaultConfigPath(projectRoot))) {
+      const items = getVaultItemStatuses(projectRoot);
+      const groups = (['dirty', 'unsealed'] as const)
+        .map(state => ({ state, paths: items.filter(i => i.state === state).map(i => i.path) }))
+        .filter(g => g.paths.length > 0)
+        .map(g => `${g.paths.length} ${g.state}: ${g.paths.join(', ')}`);
+      const detail = items.length === 0 ? '' : ` (${groups.length === 0 ? 'All sealed & clean' : groups.join(', ')})`;
+      vaultLines.push(`- Tracked Secrets: ${items.length}${detail}`);
+    }
+    if (fs.existsSync(getAssetsLockfilePath(projectRoot))) {
+      const assets = getAssetStatuses(projectRoot);
+      const detail = assets.length === 0 ? '' : ` (${assets.map(a =>
+        `${a.path}${a.tag ? ` [${a.tag}]` : ''} - ${a.blobPresent ? 'blob present' : 'blob missing'}`).join('; ')})`;
+      vaultLines.push(`- Tracked Assets: ${assets.length}${detail}`);
+    }
+  } catch (e: any) {
+    vaultLines.push(`- Vault/asset status unavailable: ${e?.message || e}`);
   }
   const vaultSection = vaultLines.length > 0 ? `\n## Team Vault & Asset Status\n${vaultLines.join('\n')}\n` : '';
 
