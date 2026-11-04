@@ -374,3 +374,35 @@ export function checkVaultDirtyStatus(projectRoot: string): { isDirty: boolean; 
 
   return { isDirty: dirtyFiles.length > 0, dirtyFiles };
 }
+
+// --- Read-only status ---
+
+export type VaultItemState = 'sealed' | 'unsealed' | 'dirty' | 'sync';
+
+export interface VaultItemStatus {
+  path: string;
+  type: VaultFileType;
+  state: VaultItemState;
+  fileExists: boolean;
+  sealedAt?: string;
+}
+
+export function getVaultItemStatuses(projectRoot: string): VaultItemStatus[] {
+  const lockfile = loadVaultLockfile(projectRoot);
+  return loadVaultConfig(projectRoot).items.map((item) => {
+    const fullPath = path.join(projectRoot, item.path);
+    // Directories and globs are not regular files, so they count as not on disk.
+    const fileExists = fs.existsSync(fullPath) && fs.statSync(fullPath).isFile();
+    const entry = lockfile.files[item.path];
+    let state: VaultItemState;
+    if (!entry) {
+      state = 'unsealed';
+    } else if (!fileExists) {
+      state = 'sealed';
+    } else {
+      const sha = crypto.createHash('sha256').update(fs.readFileSync(fullPath)).digest('hex');
+      state = sha === entry.sha256 ? 'sync' : 'dirty';
+    }
+    return { path: item.path, type: item.type, state, fileExists, sealedAt: entry?.sealedAt };
+  });
+}

@@ -5,9 +5,10 @@ import os from 'os';
 import { 
   encryptPayload, decryptPayload, 
   reconcileEnvFiles, generateSafeEnvSchema,
-  trackVaultFile, sealVault, unsealVault, checkVaultDirtyStatus
+  trackVaultFile, sealVault, unsealVault, checkVaultDirtyStatus,
+  getVaultItemStatuses, loadVaultConfig, saveVaultConfig
 } from './vault.js';
-import { trackAsset, stashLocalAsset, restoreLocalAsset } from './assets.js';
+import { trackAsset, stashLocalAsset, restoreLocalAsset, getAssetStatuses } from './assets.js';
 
 describe('Zepher Team Vault & Asset Hub', () => {
   let tmpDir: string;
@@ -191,3 +192,36 @@ ENABLE_ANALYTICS=true
 });
 
 
+
+describe('getVaultItemStatuses', () => {
+  let root: string;
+  beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'zepher-vstatus-')); });
+  afterEach(() => { fs.rmSync(root, { recursive: true, force: true }); });
+
+  it('reports sync, dirty, sealed, unsealed and tolerates directories and globs', () => {
+    for (const f of ['sync.env', 'dirty.env', 'sealed.env']) {
+      fs.writeFileSync(path.join(root, f), f);
+      trackVaultFile(root, f);
+    }
+    sealVault(root, 'pw');
+    fs.writeFileSync(path.join(root, 'dirty.env'), 'changed');
+    fs.rmSync(path.join(root, 'sealed.env'));
+    fs.mkdirSync(path.join(root, 'dir'));
+    const cfg = loadVaultConfig(root);
+    cfg.items.push(
+      { path: 'new.env', type: 'secret' },
+      { path: 'dir', type: 'seed' },
+      { path: 'seeds/*.sql', type: 'seed' }
+    );
+    saveVaultConfig(root, cfg);
+
+    const byPath = Object.fromEntries(getVaultItemStatuses(root).map(s => [s.path, s]));
+    expect(byPath['sync.env']).toMatchObject({ state: 'sync', fileExists: true });
+    expect(byPath['sync.env'].sealedAt).toBeDefined();
+    expect(byPath['dirty.env'].state).toBe('dirty');
+    expect(byPath['sealed.env']).toMatchObject({ state: 'sealed', fileExists: false });
+    expect(byPath['new.env']).toMatchObject({ state: 'unsealed', fileExists: false });
+    expect(byPath['dir']).toMatchObject({ state: 'unsealed', fileExists: false });
+    expect(byPath['seeds/*.sql'].state).toBe('unsealed');
+  });
+});

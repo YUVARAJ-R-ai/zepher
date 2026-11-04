@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { trackAsset, restoreLocalAsset, loadAssetsLockfile, saveAssetsLockfile } from './assets.js';
+import { trackAsset, restoreLocalAsset, loadAssetsLockfile, saveAssetsLockfile, getAssetStatuses, stashLocalAsset } from './assets.js';
 
 const CONTENT = 'hello blob';
 
@@ -123,5 +123,23 @@ describe('restoreLocalAsset cloud download', () => {
     expect(res.message).toBe(
       `Missing blob at ${loc}. Run "zepher asset stash <path>" on a machine that has the file, or copy the blob there.`
     );
+  });
+});
+
+describe('getAssetStatuses', () => {
+  it('reports blob presence', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zepher-astatus-'));
+    try {
+      fs.writeFileSync(path.join(root, 'a.bin'), 'a');
+      trackAsset(root, 'a.bin', { tag: 'v1' });
+      stashLocalAsset(root, 'a.bin');
+      fs.writeFileSync(path.join(root, 'b.bin'), 'b');
+      trackAsset(root, 'b.bin', {});
+      const byPath = Object.fromEntries(getAssetStatuses(root).map(s => [s.path, s]));
+      expect(byPath['a.bin']).toMatchObject({ blobPresent: true, tag: 'v1' });
+      expect(byPath['b.bin'].blobPresent).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

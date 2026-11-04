@@ -189,3 +189,14 @@ export function restoreLocalAsset(
   fs.writeFileSync(destPath, blobData);
   return { success: true, message: `Restored asset "${normalizedRelPath}" successfully (verified SHA-256).` };
 }
+
+export interface AssetStatus extends AssetPointer {
+  blobPresent: boolean;
+}
+
+export function getAssetStatuses(projectRoot: string): AssetStatus[] {
+  return Object.values(loadAssetsLockfile(projectRoot).assets).map((pointer) => ({
+    ...pointer,
+    blobPresent: fs.existsSync(path.join(projectRoot, pointer.location))
+  }));
+}
