@@ -152,7 +152,7 @@ zepher verify
 ```
 - Exits with a non-zero status code if any configuration has drifted or was edited by hand outside of Zepher.
 - Perfect for automated CI pipelines (GitHub Actions, GitLab CI) and pre-push hooks.
-- CI runs with no global config. If you have global `~/.zepher` rules or skills, regenerate committed files with `HOME=$(mktemp -d) zepher sync --force` to avoid drift failures.
+- CI runs with no global config. If you have global `~/.zepher` rules or skills, regenerate committed files with `zepher sync --project-only --force`. `zepher verify` accepts files matching either the full compile or the project-only compile.
 
 ### 4. 👁️ Background Auto-Sync Daemon (`zepher watch`)
 Never worry about running `zepher sync` manually again:

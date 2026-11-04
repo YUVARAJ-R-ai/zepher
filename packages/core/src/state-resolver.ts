@@ -204,11 +204,14 @@ export function saveLockfile(projectRoot: string, lockfile: ZepherLockfile, isGl
   fs.writeFileSync(lockPath, yaml.stringify(lockfile), 'utf-8');
 }
 
-export async function resolveUnifiedState(projectRoot: string): Promise<UnifiedZepherState> {
+export async function resolveUnifiedState(
+  projectRoot: string,
+  options: { projectOnly?: boolean } = {}
+): Promise<UnifiedZepherState> {
   const globalRulesDir = path.join(GLOBAL_ZEPHER_DIR, RULES_DIR);
   const localRulesDir = path.join(projectRoot, ZEPHER_DIR, RULES_DIR);
 
-  const globalRules = loadRulesFromDir(globalRulesDir, 'global');
+  const globalRules = options.projectOnly ? [] : loadRulesFromDir(globalRulesDir, 'global');
   const localRules = loadRulesFromDir(localRulesDir, 'local');
 
   // Merge rules: local overrides global with same id
@@ -232,7 +235,7 @@ export async function resolveUnifiedState(projectRoot: string): Promise<UnifiedZ
   const globalSkillsDir = path.join(GLOBAL_ZEPHER_DIR, SKILLS_DIR);
   const localSkillsDir = path.join(projectRoot, ZEPHER_DIR, SKILLS_DIR);
 
-  const globalSkills = loadSkillsFromDir(globalSkillsDir, 'global');
+  const globalSkills = options.projectOnly ? [] : loadSkillsFromDir(globalSkillsDir, 'global');
   const localSkills = loadSkillsFromDir(localSkillsDir, 'local');
 
   const skillMap = new Map<string, SkillMeta>();
@@ -248,7 +251,7 @@ export async function resolveUnifiedState(projectRoot: string): Promise<UnifiedZ
   const globalHooksDir = path.join(GLOBAL_ZEPHER_DIR, HOOKS_DIR);
   const localHooksDir = path.join(projectRoot, ZEPHER_DIR, HOOKS_DIR);
 
-  const globalHooks = loadHooksFromDir(globalHooksDir, 'global');
+  const globalHooks = options.projectOnly ? [] : loadHooksFromDir(globalHooksDir, 'global');
   const localHooks = loadHooksFromDir(localHooksDir, 'local');
   const mergedHooks = [...globalHooks, ...localHooks];
 
