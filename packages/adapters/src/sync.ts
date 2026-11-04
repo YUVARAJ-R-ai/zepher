@@ -10,6 +10,7 @@ export interface SyncOptions {
   dryRun?: boolean;
   force?: boolean;
   adapter?: string;
+  projectOnly?: boolean;
 }
 
 export interface SyncResult {
@@ -31,7 +32,7 @@ export async function runSync(projectRoot: string, options: SyncOptions = {}): P
     hooksRun: 0
   };
 
-  const state = await resolveUnifiedState(projectRoot);
+  const state = await resolveUnifiedState(projectRoot, { projectOnly: options.projectOnly });
 
   // 1. Run pre-sync hooks
   if (!options.dryRun && state.hooks.length > 0) {
@@ -154,12 +155,15 @@ export async function verifySyncDrift(projectRoot: string): Promise<DriftCheckRe
     drifts: []
   };
 
-  const state = await resolveUnifiedState(projectRoot);
+  // A file is in sync if it matches the full compile or the project-only compile.
+  const fullState = await resolveUnifiedState(projectRoot);
+  const projectState = await resolveUnifiedState(projectRoot, { projectOnly: true });
   const detected = await detectActiveAdapters(projectRoot);
   const adapters = detected.length > 0 ? detected : [getAdapter('cursor')!, getAdapter('claude')!].filter(Boolean);
 
   for (const adapter of adapters) {
-    const output = await adapter.compile(state, projectRoot);
+    const output = await adapter.compile(fullState, projectRoot);
+    const projectOutput = await adapter.compile(projectState, projectRoot);
     if (output.files) {
       for (const f of output.files) {
         const fullPath = path.join(projectRoot, f.path);
@@ -171,11 +175,10 @@ export async function verifySyncDrift(projectRoot: string): Promise<DriftCheckRe
           continue;
         }
 
-        const diskContent = fs.readFileSync(fullPath, 'utf-8');
-        const strippedDisk = stripWatermark(diskContent);
-        const diskChecksum = calculateChecksum(strippedDisk);
+        const diskChecksum = calculateChecksum(stripWatermark(fs.readFileSync(fullPath, 'utf-8')));
         const expectedChecksum = calculateChecksum(f.content);
-        if (diskChecksum !== expectedChecksum) {
+        const projectContent = projectOutput.files?.find(p => p.path === f.path)?.content;
+        if (diskChecksum !== expectedChecksum && (projectContent === undefined || diskChecksum !== calculateChecksum(projectContent))) {
           result.inSync = false;
           result.drifts.push({ file: f.path, reason: `Content drift detected (disk: ${diskChecksum}, expected: ${expectedChecksum})` });
         }

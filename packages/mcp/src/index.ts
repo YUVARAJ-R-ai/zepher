@@ -6,13 +6,14 @@ import { generateContext } from '@zepher/context';
 import { createTask, listTasks, completeTask, blockTask } from '@zepher/tasks';
 import { createDecision, listDecisions } from '@zepher/decisions';
 import { createHandoff } from '@zepher/sessions';
-import { getStatus, resolveUnifiedState, addRule } from '@zepher/core';
+import { getStatus, resolveUnifiedState, addRule, getVaultItemStatuses, getAssetStatuses } from '@zepher/core';
 import { getAllIntegrations } from '@zepher/integrations';
 import { listAllSkills } from '@zepher/skills';
 import { runSync } from '@zepher/adapters';
+import { listWorkflows, getWorkflowProgress } from '@zepher/workflows';
 import path from 'path';
 
-const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
+export const server = new Server({ name: 'zepher', version: '0.3.1' }, { capabilities: { tools: {} } });
 
 const TOOLS: Tool[] = [
   {
@@ -119,6 +120,21 @@ const TOOLS: Tool[] = [
       },
       required: ['projectRoot']
     }
+  },
+  {
+    name: 'zepher_vault_status',
+    description: 'Show status (sealed/unsealed/dirty/sync) of tracked vault items. Never returns secret values',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
+  },
+  {
+    name: 'zepher_asset_list',
+    description: 'List assets in assets.lock.yaml with storage backend and whether the local blob exists',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' } }, required: ['projectRoot'] }
+  },
+  {
+    name: 'zepher_get_workflow',
+    description: 'Get a built-in workflow with its phases and progress (completed phases and next phase); without a name, list available workflows. Never runs validation commands',
+    inputSchema: { type: 'object', properties: { projectRoot: { type: 'string' }, name: { type: 'string' } }, required: ['projectRoot'] }
   }
 ];
 
@@ -126,7 +142,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }))
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const tool = TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`Unknown tool: ${name}`);
   if (!args || typeof args.projectRoot !== 'string') throw new Error('projectRoot is required');
+  // String(undefined) would otherwise be written to disk as "undefined".
+  for (const key of tool.inputSchema.required as string[]) {
+    if (typeof args[key] !== 'string') throw new Error(`${key} is required`);
+  }
   const { projectRoot } = args;
 
   try {
@@ -189,11 +211,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
         return { content: [{ type: 'text', text: JSON.stringify(syncRes, null, 2) }] };
       }
+      case 'zepher_vault_status':
+        return { content: [{ type: 'text', text: JSON.stringify(getVaultItemStatuses(projectRoot), null, 2) }] };
+      case 'zepher_asset_list':
+        return { content: [{ type: 'text', text: JSON.stringify(getAssetStatuses(projectRoot), null, 2) }] };
+      case 'zepher_get_workflow': {
+        if (!args.name) return { content: [{ type: 'text', text: JSON.stringify(listWorkflows(), null, 2) }] };
+        const progress = getWorkflowProgress(projectRoot, String(args.name));
+        if (!progress) throw new Error(`Unknown workflow: ${args.name}`);
+        return { content: [{ type: 'text', text: JSON.stringify(progress, null, 2) }] };
+      }
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (e: any) {
-    return { content: [{ type: 'text', text: `Error: ${e.message || e}` }] };
+    return { isError: true, content: [{ type: 'text', text: `Error: ${e.message || e}` }] };
   }
 });
 

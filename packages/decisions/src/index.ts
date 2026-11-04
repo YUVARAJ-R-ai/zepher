@@ -111,13 +111,16 @@ export function getDecision(projectRoot: string, query: string): { fileName: str
   const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.md'));
   const normalized = query.trim().toLowerCase();
 
+  // Filenames hold the slugified title, so a spaced title snippet must be slugified to match.
+  const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const matchedFile = files.find(f => {
     const low = f.toLowerCase();
     return (
       low === normalized ||
       low === `${normalized}.md` ||
       low.startsWith(normalized) ||
-      low.includes(normalized)
+      low.includes(normalized) ||
+      (slug !== '' && low.includes(slug))
     );
   });
 

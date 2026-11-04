@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { execFileSync } from 'child_process';
 import yaml from 'yaml';
 import { ZEPHER_DIR, ASSETS_LOCKFILE } from './constants.js';
 import { AssetsLockfile, AssetPointer } from './types.js';
@@ -103,6 +104,63 @@ export function stashLocalAsset(
   return { success: true, message: `Stashed asset "${normalizedRelPath}" to blob store (${pointer.location}).` };
 }
 
+function fetchMissingBlob(projectRoot: string, pointer: AssetPointer): { success: boolean; message: string } {
+  const { location, storage } = pointer;
+  if (storage !== 's3' && storage !== 'r2') {
+    return {
+      success: false,
+      message: `Missing blob at ${location}. Run "zepher asset stash <path>" on a machine that has the file, or copy the blob there.`
+    };
+  }
+
+  const envNames = storage === 's3' ? ['ZEPHER_S3_BUCKET', 'AWS_S3_BUCKET'] : ['R2_BUCKET', 'ZEPHER_S3_BUCKET'];
+  const bucket = envNames.map((n) => process.env[n]).find(Boolean);
+  const blobName = path.basename(location);
+  const blobPath = path.join(projectRoot, location);
+  const blobDir = path.join(projectRoot, ZEPHER_DIR, 'assets', 'blobs');
+  const bucketName = bucket ?? '<bucket>';
+  const tool = storage === 's3' ? 'aws' : 'rclone';
+  const source = storage === 's3' ? `s3://${bucketName}/blobs/${blobName}` : `r2:${bucketName}/blobs/${blobName}`;
+  const verb = storage === 's3' ? ['s3', 'cp'] : ['copyto'];
+  const manual = `${tool} ${verb.join(' ')} ${source} ${location}`;
+
+  // The lockfile is repo content: never let it point the download outside the blob store.
+  if (path.dirname(blobPath) !== blobDir || !/^[A-Za-z0-9._-]+$/.test(blobName)) {
+    return { success: false, message: `Refusing to download blob with unsafe location "${location}".` };
+  }
+  if (!bucket) {
+    return {
+      success: false,
+      message: `Missing blob at ${location}. Set ${envNames.join(' or ')}, or download with:\n  ${manual}`
+    };
+  }
+
+  const tmpPath = `${blobPath}.tmp`;
+  fs.mkdirSync(blobDir, { recursive: true });
+  // A planted <blob>.tmp (e.g. a symlink) must never be written through.
+  fs.rmSync(tmpPath, { force: true });
+  try {
+    try {
+      const args = [...verb, ...(storage === 's3' ? ['--no-progress'] : []), source, tmpPath];
+      execFileSync(tool, args, { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException & { stderr?: Buffer };
+      const why = e.code === 'ENOENT'
+        ? `"${tool}" is not installed`
+        : `${tool} failed: ${e.stderr?.toString().split('\n')[0] || e.message}`;
+      return { success: false, message: `Missing blob at ${location}; ${why}. Download manually with:\n  ${manual}` };
+    }
+    const sha = crypto.createHash('sha256').update(fs.readFileSync(tmpPath)).digest('hex');
+    if (sha !== pointer.sha256) {
+      return { success: false, message: `Downloaded blob for ${location} failed SHA-256 verification; discarded.` };
+    }
+    fs.renameSync(tmpPath, blobPath);
+    return { success: true, message: '' };
+  } finally {
+    fs.rmSync(tmpPath, { force: true });
+  }
+}
+
 export function restoreLocalAsset(
   projectRoot: string,
   relPath: string
@@ -116,7 +174,8 @@ export function restoreLocalAsset(
 
   const blobPath = path.join(projectRoot, pointer.location);
   if (!fs.existsSync(blobPath)) {
-    return { success: false, message: `Missing blob at ${pointer.location}.` };
+    const fetched = fetchMissingBlob(projectRoot, pointer);
+    if (!fetched.success) return fetched;
   }
 
   const blobData = fs.readFileSync(blobPath);
@@ -132,4 +191,15 @@ export function restoreLocalAsset(
 
   fs.writeFileSync(destPath, blobData);
   return { success: true, message: `Restored asset "${normalizedRelPath}" successfully (verified SHA-256).` };
+}
+
+export interface AssetStatus extends AssetPointer {
+  blobPresent: boolean;
+}
+
+export function getAssetStatuses(projectRoot: string): AssetStatus[] {
+  return Object.values(loadAssetsLockfile(projectRoot).assets).map((pointer) => ({
+    ...pointer,
+    blobPresent: fs.existsSync(path.join(projectRoot, pointer.location))
+  }));
 }

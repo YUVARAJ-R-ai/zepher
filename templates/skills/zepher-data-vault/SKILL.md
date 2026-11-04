@@ -153,13 +153,13 @@ To share the blob files across teammates without checking them into Git:
 ### Option A: AWS S3 or MinIO
 1. **Upload Stashed Blobs:**
    ```bash
-   aws s3 sync .zepher/assets/blobs/ s3://my-team-bucket/zepher-blobs/
+   aws s3 sync .zepher/assets/blobs/ s3://my-team-bucket/blobs/
    ```
 2. **Teammates Restore Blobs and Rebuild Asset:**
    ```bash
    git pull
    # Download missing blobs from S3
-   aws s3 sync s3://my-team-bucket/zepher-blobs/ .zepher/assets/blobs/
+   aws s3 sync s3://my-team-bucket/blobs/ .zepher/assets/blobs/
    # Pull and verify asset integrity
    zepher asset pull data-bundle.tar.gz
    tar -xzf data-bundle.tar.gz
@@ -169,15 +169,17 @@ To share the blob files across teammates without checking them into Git:
 Cloudflare R2 uses the S3-compatible API:
 1. **Upload:**
    ```bash
-   aws s3 sync .zepher/assets/blobs/ s3://my-r2-bucket/zepher-blobs/ \
+   aws s3 sync .zepher/assets/blobs/ s3://my-r2-bucket/blobs/ \
      --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
    ```
 2. **Download & Pull:**
    ```bash
-   aws s3 sync s3://my-r2-bucket/zepher-blobs/ .zepher/assets/blobs/ \
+   aws s3 sync s3://my-r2-bucket/blobs/ .zepher/assets/blobs/ \
      --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
    zepher asset pull data-bundle.tar.gz
    ```
+
+`zepher asset pull` can also download a missing blob itself for `s3`/`r2` assets: set `ZEPHER_S3_BUCKET` (or `AWS_S3_BUCKET` for s3, `R2_BUCKET` for r2) with `aws`/`rclone` installed, and blobs are fetched from `blobs/<blobName>` in that bucket. For `r2`, `zepher asset pull` uses an rclone remote named exactly `r2`. Teams that already have objects under `zepher-blobs/` must move them to `blobs/`.
 
 ### Option C: Google Drive via `rclone`
 `rclone` provides direct command-line synchronization with Google Drive:

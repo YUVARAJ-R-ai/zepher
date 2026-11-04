@@ -43,7 +43,7 @@ ${rule.content.trim()}
     }
 
     // 2. Emit main .cursorrules for general standards, hooks, and context
-    let content = `# Cursor Project Rules for ${state.project.name}\n\n`;
+    let content = `# Cursor Project Rules\n\n`;
 
     if (globalRules.length > 0) {
       content += `## Engineering Standards & Rules\n`;

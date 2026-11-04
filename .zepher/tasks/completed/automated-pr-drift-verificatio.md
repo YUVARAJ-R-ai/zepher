@@ -7,7 +7,7 @@ Add a GitHub Actions workflow to run zepher sync --dry-run on pull requests to d
 - 
 
 ## Status
-Active
+Completed
 
 ## Dependencies
 - 

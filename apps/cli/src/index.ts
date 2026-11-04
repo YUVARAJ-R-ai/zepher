@@ -4,7 +4,7 @@ import {
   initZepher, initGlobalZepher, getStatus, runDoctor, bootstrapAgent,
   addRule, listAllRules, removeRule,
   addHook, listAllHooks, removeHook, installGitHooks, uninstallGitHooks,
-  runHooks, resolveUnifiedState,
+  runHooks, resolveUnifiedState, VALID_HOOK_STAGES,
   trackVaultFile, sealVault, unsealVault, loadVaultConfig, loadVaultLockfile, checkVaultDirtyStatus,
   trackAsset, stashLocalAsset, restoreLocalAsset
 } from '@zepher/core';
@@ -20,6 +20,7 @@ import {
   installSkillFromSource, listAllSkills, removeSkill, harvestAgentSkills, linkAgentSkills,
   updateSkill, updateAllSkills, pinSkill, unpinSkill 
 } from '@zepher/skills';
+import { listWorkflows, getWorkflowProgress, completePhase, resetWorkflow } from '@zepher/workflows';
 import { runIntegrationTui } from './tui.js';
 
 const program = new Command();
@@ -51,7 +52,10 @@ program
   .option('-g, --global', 'Store in global Zepher memory (~/.zepher/memory)')
   .description('Save knowledge, conventions, or decisions into persistent memory')
   .action((text, options) => {
-    saveMemory(process.cwd(), options.type, text, { global: options.global });
+    if (!saveMemory(process.cwd(), options.type, text, { global: options.global })) {
+      process.exitCode = 1;
+      return;
+    }
     console.log(chalk.green(`✓ Saved to ${options.global ? 'global' : 'local'} memory [${options.type}]`));
   });
 
@@ -100,6 +104,58 @@ program
     console.log(chalk.green(`✓ Session handoff created: .zepher/handoffs/${fileName}`));
   });
 
+program
+  .command('workflow [name]')
+  .description('Show or advance a built-in workflow (feature-development, bug-fix, security-audit)')
+  .option('--json', 'Print progress as JSON')
+  .option('--done <phase>', 'Mark the next phase complete (runs its validation command)')
+  .option('--reset', 'Clear recorded progress')
+  .action((name: string | undefined, options) => {
+    if (!name) {
+      if (options.done || options.reset) {
+        console.error(chalk.red('A workflow name is required with --done or --reset'));
+        process.exitCode = 1;
+        return;
+      }
+      if (options.json) {
+        console.log(JSON.stringify(listWorkflows(), null, 2));
+        return;
+      }
+      for (const w of listWorkflows()) console.log(`${chalk.cyan(w.name)}  ${w.description}`);
+      return;
+    }
+    const root = process.cwd();
+    if (!getWorkflowProgress(root, name)) {
+      console.error(chalk.red(`Unknown workflow: ${name}`));
+      process.exitCode = 1;
+      return;
+    }
+    if (options.reset) {
+      resetWorkflow(root, name);
+      console.log(chalk.green(`✓ Reset ${name}`));
+      return;
+    }
+    if (options.done) {
+      const res = completePhase(root, name, options.done);
+      (res.success ? console.log : console.error)(res.success ? chalk.green(`✓ ${res.message}`) : chalk.red(res.message));
+      if (!res.success) process.exitCode = 1;
+      return;
+    }
+    const progress = getWorkflowProgress(root, name)!;
+    if (options.json) {
+      console.log(JSON.stringify(progress, null, 2));
+      return;
+    }
+    console.log(chalk.bold(`${progress.workflow.name}: ${progress.workflow.description}`));
+    for (const p of progress.workflow.phases) {
+      const done = progress.completed.includes(p.id);
+      const line = `${done ? '[x]' : '[ ]'} ${p.id} - ${p.title}`;
+      console.log(p.id === progress.next ? chalk.bold.yellow(`${line}  <- next`) : line);
+      for (const step of p.steps) console.log(`      - ${step}`);
+      if (p.validate) console.log(`      validate: ${p.validate}`);
+    }
+  });
+
 // Task command suite
 const taskCmd = program.command('task').description('Manage persistent agent tasks in .zepher/tasks/');
 
@@ -137,6 +193,7 @@ taskCmd
     const task = getTask(process.cwd(), id);
     if (!task) {
       console.log(chalk.red(`Task not found: ${id}`));
+      process.exitCode = 1;
       return;
     }
     console.log(chalk.bold(`Task: ${task.title} [Status: ${task.status}]`));
@@ -154,6 +211,7 @@ taskCmd
       console.log(chalk.green(`✓ Task completed: ${id} (moved to .zepher/tasks/completed/)`));
     } else {
       console.log(chalk.red(`Task not found: ${id}`));
+      process.exitCode = 1;
     }
   });
 
@@ -168,6 +226,7 @@ taskCmd
       console.log(chalk.yellow(`⚠ Task marked as blocked: ${id} (moved to .zepher/tasks/blocked/)`));
     } else {
       console.log(chalk.red(`Task not found: ${id}`));
+      process.exitCode = 1;
     }
   });
 
@@ -216,6 +275,7 @@ adrCmd
     const adr = getDecision(process.cwd(), query);
     if (!adr) {
       console.log(chalk.red(`ADR not found matching: ${query}`));
+      process.exitCode = 1;
       return;
     }
     console.log(chalk.bold(`=== ${adr.fileName} ===\n`));
@@ -231,9 +291,11 @@ program
   .option('-d, --dry-run', 'Preview changes without modifying any files')
   .option('-f, --force', 'Force overwrite unmanaged or edited configuration files')
   .option('-a, --adapter <adapter>', 'Target specific adapter (cursor, claude, windsurf, copilot, gemini)')
+  .option('--project-only', 'Compile from project .zepher/ only, ignoring global ~/.zepher rules, skills and hooks')
   .action(async (options) => {
     try {
       const result = await runSync(process.cwd(), {
+        projectOnly: options.projectOnly,
         dryRun: options.dryRun,
         force: options.force,
         adapter: options.adapter
@@ -264,7 +326,7 @@ program
         for (const d of res.drifts) {
           console.error(chalk.red(`  • ${d.file}: ${d.reason}`));
         }
-        console.log(chalk.yellow(`\nRun ${chalk.cyan('zepher sync')} to reconcile configurations.`));
+        console.log(chalk.yellow(`\nRun ${chalk.cyan('zepher sync')} (or ${chalk.cyan('zepher sync --project-only')} for committed, global-free files) to reconcile configurations.`));
         process.exit(1);
       }
     } catch (err: any) {
@@ -379,6 +441,7 @@ ruleCmd
       console.log(chalk.green(`✓ Removed rule "${id}"`));
     } else {
       console.log(chalk.red(`✗ Rule "${id}" not found.`));
+      process.exitCode = 1;
     }
   });
 
@@ -522,6 +585,7 @@ skillCmd
       console.log(chalk.green(`✓ Removed skill "${name}"`));
     } else {
       console.log(chalk.red(`✗ Skill "${name}" not found.`));
+      process.exitCode = 1;
     }
   });
 
@@ -633,6 +697,7 @@ hookCmd
       console.log(chalk.green(`✓ Removed hook "${name}"`));
     } else {
       console.log(chalk.red(`✗ Hook "${name}" not found.`));
+      process.exitCode = 1;
     }
   });
 
@@ -641,6 +706,11 @@ hookCmd
   .description('Execute hooks for a specific stage')
   .argument('<stage>', 'Stage to run (pre-sync, post-sync, pre-commit, post-commit)')
   .action(async (stage) => {
+    if (!(VALID_HOOK_STAGES as string[]).includes(stage)) {
+      console.error(chalk.red(`Invalid hook stage "${stage}". Valid stages: ${VALID_HOOK_STAGES.join(', ')}`));
+      process.exitCode = 1;
+      return;
+    }
     const state = await resolveUnifiedState(process.cwd());
     const results = runHooks(stage, state.hooks, process.cwd());
     if (results.length === 0) {
@@ -700,8 +770,16 @@ const integrate = program.command('integrate').description('Manage integrations'
 integrate.action(async () => {
   await runIntegrationTui(process.cwd());
 });
-integrate.command('enable').argument('<id>').action(async (id) => { const i = getIntegration(id); if (i) await i.enable(process.cwd()); });
-integrate.command('disable').argument('<id>').action(async (id) => { const i = getIntegration(id); if (i) await i.disable(process.cwd()); });
+integrate.command('enable').argument('<id>').action(async (id) => {
+  const i = getIntegration(id);
+  if (!i) { console.error(chalk.red(`Unknown integration: ${id}`)); process.exitCode = 1; return; }
+  await i.enable(process.cwd());
+});
+integrate.command('disable').argument('<id>').action(async (id) => {
+  const i = getIntegration(id);
+  if (!i) { console.error(chalk.red(`Unknown integration: ${id}`)); process.exitCode = 1; return; }
+  await i.disable(process.cwd());
+});
 integrate.command('status').action(async () => {
   for (const i of getAllIntegrations()) {
     const s = await i.status(process.cwd());
@@ -738,34 +816,39 @@ vaultCmd
       console.log(`Run ${chalk.cyan('zepher vault seal')} to encrypt.`);
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 
 vaultCmd
   .command('seal')
   .description('Encrypt all tracked vault files into .zepher/vault/*.enc')
-  .option('-p, --passphrase <key>', 'Passphrase or key to encrypt envelope', 'zepher-team-key')
+  .option('-p, --passphrase <key>', 'Passphrase or key to encrypt envelope')
   .action((opts) => {
-    const res = sealVault(process.cwd(), opts.passphrase);
+    if (!opts.passphrase) console.error(chalk.yellow('Warning: no -p given; using the default key, which is public and gives no real protection.'));
+    const res = sealVault(process.cwd(), opts.passphrase ?? 'zepher-team-key');
     if (res.sealedCount > 0) {
       console.log(chalk.bold.green(`✓ Successfully sealed and encrypted ${res.sealedCount} vault file(s).`));
     }
     if (res.errors.length > 0) {
       res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+      process.exitCode = 1;
     }
   });
 
 vaultCmd
   .command('unseal')
   .description('Decrypt vault files into working directory')
-  .option('-p, --passphrase <key>', 'Passphrase or key to decrypt envelope', 'zepher-team-key')
+  .option('-p, --passphrase <key>', 'Passphrase or key to decrypt envelope')
   .action((opts) => {
-    const res = unsealVault(process.cwd(), opts.passphrase);
+    if (!opts.passphrase) console.error(chalk.yellow('Warning: no -p given; using the default key, which is public and gives no real protection.'));
+    const res = unsealVault(process.cwd(), opts.passphrase ?? 'zepher-team-key');
     if (res.unsealedCount > 0) {
       console.log(chalk.bold.green(`✓ Successfully unsealed ${res.unsealedCount} vault file(s).`));
     }
     if (res.errors.length > 0) {
       res.errors.forEach(e => console.error(chalk.red(`  • ${e}`)));
+      process.exitCode = 1;
     }
   });
 
@@ -808,6 +891,7 @@ assetCmd
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 
@@ -820,6 +904,7 @@ assetCmd
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 
@@ -832,6 +917,7 @@ assetCmd
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 

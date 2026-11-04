@@ -10,6 +10,10 @@ export function saveMemory(
   options: { global?: boolean } | boolean = false
 ): boolean {
   const isGlobal = typeof options === 'boolean' ? options : Boolean(options?.global);
+  if (!/^[A-Za-z0-9_-]+$/.test(type)) {
+    console.error(`Error: Invalid memory type "${type}". Use letters, digits, '-' or '_' only.`);
+    return false;
+  }
   if (containsSecret(content)) {
     console.error(`Error: Potential secret detected. Memory write rejected.`);
     return false;

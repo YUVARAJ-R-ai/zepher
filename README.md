@@ -152,6 +152,7 @@ zepher verify
 ```
 - Exits with a non-zero status code if any configuration has drifted or was edited by hand outside of Zepher.
 - Perfect for automated CI pipelines (GitHub Actions, GitLab CI) and pre-push hooks.
+- CI runs with no global config. If you have global `~/.zepher` rules or skills, regenerate committed files with `zepher sync --project-only --force`. `zepher verify` accepts files matching either the full compile or the project-only compile.
 
 ### 4. 👁️ Background Auto-Sync Daemon (`zepher watch`)
 Never worry about running `zepher sync` manually again:
@@ -332,6 +333,11 @@ All standalone developer commands are invoked via the `zepher` CLI executable. C
 | `zepher context` | — | Generate and refresh the composite markdown context in `.zepher/context/current.md`. |
 | `zepher handoff` | `[-o, --objective <text>]`<br>`[-c, --completed <text>]`<br>`[-b, --blockers <text>]`<br>`[-n, --notes <text>]`<br>`[-a, --next <text>]` | Synthesize an actionable session handoff note auto-populated with git branch, status, recent commits, and active tasks. |
 
+### 🧭 Workflows (`zepher workflow`)
+| Command | Options / Arguments | Description |
+|---|---|---|
+| `zepher workflow [name]` | `[--json]`<br>`[--done <phase>]`<br>`[--reset]` | List built-in workflows (`feature-development`, `bug-fix`, `security-audit`), or show one with its phases, steps and progress. `--done` marks the next phase complete after running its validation command; `--reset` clears progress. Progress is stored in `.zepher/local/workflows/`. |
+
 ### 📝 Persistent Tasks Suite (`zepher task`)
 | Command | Options / Arguments | Description |
 |---|---|---|
@@ -361,7 +367,7 @@ All standalone developer commands are invoked via the `zepher` CLI executable. C
 |---|---|---|
 | `zepher asset track <path>` | `[-t, --tag <tag>]` | Track heavy binary, dataset, database seed, or test fixture with optional release tag. |
 | `zepher asset stash <path>` | — | Compute SHA-256 hash and stash tracked file to local or remote blob store. |
-| `zepher asset pull <path>` | — | Restore tracked binary from blob store with cryptographic checksum verification. |
+| `zepher asset pull <path>` | — | Restore tracked binary from blob store with cryptographic checksum verification; missing `s3`/`r2` blobs are downloaded via `aws`/`rclone` when `ZEPHER_S3_BUCKET` (or `AWS_S3_BUCKET` / `R2_BUCKET`) is set. |
 
 ### 🔌 Integrations & Interactive TUI (`zepher integrate`)
 | Command | Options / Arguments | Description |
@@ -384,7 +390,7 @@ All standalone developer commands are invoked via the `zepher` CLI executable. C
 Zepher equips AI coding agents (**Claude Code**, **Cursor**, **Gemini / Antigravity**, **Windsurf**) with programmatic access to project state, memory, tasks, rules, and synchronization through standard protocols and runtime conventions.
 
 ### 1. Model Context Protocol (MCP v2) Tool Suite
-When running via `zepher mcp`, Zepher exposes **14 structured tools** adhering to the MCP specification:
+When running via `zepher mcp`, Zepher exposes **17 structured tools** adhering to the MCP specification:
 
 | Tool Name | Arguments & Types | Return Output | Agent Purpose & Description |
 |---|---|---|---|
@@ -402,6 +408,9 @@ When running via `zepher mcp`, Zepher exposes **14 structured tools** adhering t
 | `zepher_list_skills` | `projectRoot` (string, required) | JSON object: `{ global: Skill[], local: Skill[] }` | Enumerate all available skills, workflows, and procedures across global and project installations. |
 | `zepher_sync` | `projectRoot` (string, required)<br>`dryRun` (boolean, optional)<br>`force` (boolean, optional)<br>`adapter` (string, optional) | JSON object with compilation summary and touched file lists | Programmatically re-compile vendor agent configurations after adding rules, skills, or constraints. |
 | `zepher_generate_handoff` | `projectRoot` (string, required) | Text string: Handoff file path (e.g. `.zepher/handoffs/2026-09-10T12-00.md`) | Synthesize an actionable handoff snapshot capturing current git branch, uncommitted diffs, and remaining tasks. |
+| `zepher_vault_status` | `projectRoot` (string, required) | JSON array: `[{ path, type, state, fileExists, sealedAt? }]` | Report sealed/unsealed/dirty/sync state of tracked vault items. Never includes secret values. |
+| `zepher_asset_list` | `projectRoot` (string, required) | JSON array: `[{ path, sha256, size, storage, location, blobPresent }]` | List assets in `assets.lock.yaml` with storage backend and whether the local blob exists. |
+| `zepher_get_workflow` | `projectRoot` (string, required)<br>`name` (string, optional) | JSON: workflow progress `{ workflow, completed, next }`, or the list of workflows when `name` is omitted | Read a built-in workflow's phases, validation commands and current progress. Never runs validation commands. |
 
 ### 2. Autonomous Agent Lifecycle Protocol (`AGENTS.md`)
 Zepher establishes a standard operational protocol for autonomous agents operating in the workspace:
