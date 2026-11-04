@@ -137,9 +137,12 @@ function fetchMissingBlob(projectRoot: string, pointer: AssetPointer): { success
 
   const tmpPath = `${blobPath}.tmp`;
   fs.mkdirSync(blobDir, { recursive: true });
+  // A planted <blob>.tmp (e.g. a symlink) must never be written through.
+  fs.rmSync(tmpPath, { force: true });
   try {
     try {
-      execFileSync(tool, [...verb, source, tmpPath], { stdio: 'pipe' });
+      const args = [...verb, ...(storage === 's3' ? ['--no-progress'] : []), source, tmpPath];
+      execFileSync(tool, args, { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });
     } catch (err) {
       const e = err as NodeJS.ErrnoException & { stderr?: Buffer };
       const why = e.code === 'ENOENT'

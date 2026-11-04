@@ -48,8 +48,20 @@ describe('restoreLocalAsset cloud download', () => {
     expect(res.success).toBe(true);
     expect(fs.readFileSync(path.join(root, 'data.bin'), 'utf-8')).toBe(CONTENT);
     const args = fs.readFileSync(argsLog, 'utf-8').trim();
-    expect(args).toBe(`s3 cp s3://my-bucket/blobs/${path.basename(loc)} ${path.join(root, loc)}.tmp`);
+    expect(args).toBe(`s3 cp --no-progress s3://my-bucket/blobs/${path.basename(loc)} ${path.join(root, loc)}.tmp`);
     expect(fs.readdirSync(blobsDir())).toEqual([path.basename(loc)]);
+  });
+
+  it('does not write through a planted <blob>.tmp symlink and tolerates large output', () => {
+    const loc = setup('s3');
+    process.env.ZEPHER_S3_BUCKET = 'b';
+    const victim = path.join(binDir, 'victim');
+    fs.writeFileSync(victim, 'keep');
+    fs.mkdirSync(blobsDir(), { recursive: true });
+    fs.symlinkSync(victim, path.join(root, `${loc}.tmp`));
+    fakeTool('aws', `head -c 2000000 /dev/zero | tr '\\0' x >&2\n${writeDest}`);
+    expect(restoreLocalAsset(root, 'data.bin').success).toBe(true);
+    expect(fs.readFileSync(victim, 'utf-8')).toBe('keep');
   });
 
   it('uses rclone for r2', () => {
