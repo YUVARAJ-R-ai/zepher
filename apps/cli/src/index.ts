@@ -855,6 +855,7 @@ assetCmd
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 
@@ -867,6 +868,7 @@ assetCmd
       console.log(chalk.green(`✓ ${res.message}`));
     } else {
       console.error(chalk.red(`✗ ${res.message}`));
+      process.exitCode = 1;
     }
   });
 

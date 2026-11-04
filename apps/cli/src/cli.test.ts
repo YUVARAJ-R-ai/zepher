@@ -41,4 +41,9 @@ describe('CLI exit codes', () => {
     expect(run('vault', 'unseal', '-p', 'wrong').status).toBe(1);
     expect(run('vault', 'unseal', '-p', 'pw').status).toBe(0);
   }, 60_000);
+
+  it('asset track/stash exit non-zero on failure', () => {
+    expect(run('asset', 'track', 'missing.bin').status).toBe(1);
+    expect(run('asset', 'stash', 'missing.bin').status).toBe(1);
+  }, 60_000);
 });
